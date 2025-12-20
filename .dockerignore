@@ -1,0 +1,87 @@
+# Git files
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+README.md
+PROJECT_STRUCTURE.md
+*.md
+
+# Python cache and compiled files
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+.tox
+.pytest_cache
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env/
+ENV/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Node modules (if any)
+node_modules/
+npm-debug.log
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+temp/
+tmp/
+*.tmp
+
+# Development files
+.env.example
+.env.local
+.env.development
+
+# Docker files
+Dockerfile*
+.dockerignore
+docker-compose*.yml
+
+# CI/CD files
+.github/
+.gitlab-ci.yml
+.travis.yml
+Jenkinsfile
+
+# Testing
+coverage/
+.coverage
+.nyc_output
+
+# Local development
+start.sh
+setup.py
+
+# Vector stores and models (should be mounted or downloaded at runtime)
+vectorstore/
+models/
+embeddings/
+documents/
+uploads/
