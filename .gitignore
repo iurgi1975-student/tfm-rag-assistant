@@ -149,6 +149,16 @@ Icon
 # Thumbnails
 ._*
 
+# Vector Database
+chroma_db/
+*.db
+
+# Test and Coverage
+.pytest_cache/
+htmlcov/
+.coverage
+
+
 # Files that might appear in the root of a volume
 .DocumentRevisions-V100
 .fseventsd

@@ -12,7 +12,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, trim_messages
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
-from ..rag import InMemoryVectorStore, RAGRetriever, DocumentProcessor
+from ..rag import ChromaVectorStore, RAGRetriever, DocumentProcessor
 
 
 class RAGAgent:
@@ -26,9 +26,19 @@ class RAGAgent:
         
         temperature: float = 0.7,
         max_tokens: int = 4000,
-        memory_window: int = 10
+        memory_window: int = 10,
+        chroma_persist_dir: str = "./chroma_db"
     ):
-        """Initialize the RAG Agent."""
+        """Initialize the RAG Agent.
+        
+        Args:
+            api_key: OpenAI API key (optional, for future use).
+            model_name: Name of the LLM model to use (Ollama).
+            temperature: LLM temperature parameter (0-2).
+            max_tokens: Maximum tokens in LLM response.
+            memory_window: Number of messages to keep in history.
+            chroma_persist_dir: Directory where Chroma database is stored.
+        """
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         if not self.api_key:
             raise ValueError("OpenAI API key is required")
@@ -51,8 +61,8 @@ class RAGAgent:
         )
 
         
-        # Initialize RAG components
-        self.vector_store = InMemoryVectorStore(api_key=self.api_key)
+        # Initialize RAG components with persistent Chroma storage
+        self.vector_store = ChromaVectorStore(persist_dir=chroma_persist_dir, api_key=self.api_key)
         self.retriever = RAGRetriever(self.vector_store)
         self.doc_processor = DocumentProcessor()
         

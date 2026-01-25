@@ -11,6 +11,9 @@ langchain-ollama
 # Web interface
 gradio<6.0
 
+# Vector database
+chromadb>=0.5.0
+
 # pdf processing
 pypdf>=5.0.0
 
