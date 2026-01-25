@@ -5,14 +5,14 @@ import os
 from typing import List, Optional, Tuple
 
 from langchain_core.documents import Document
-from langchain_openai import OpenAIEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_core.vectorstores import InMemoryVectorStore as LangChainInMemoryVectorStore
 
 
 class InMemoryVectorStore:
     """Wrapper around LangChain's InMemoryVectorStore for document retrieval."""
     
-    def __init__(self, embedding_model: str = "text-embedding-3-small", api_key: Optional[str] = None):
+    def __init__(self, embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2", api_key: Optional[str] = None):
         """Initialize the vector store with an OpenAI embedding model."""
         import os
         
@@ -20,7 +20,7 @@ class InMemoryVectorStore:
         if api_key:
             os.environ["OPENAI_API_KEY"] = api_key
         
-        self.embedding_model = OpenAIEmbeddings(model=embedding_model)
+        self.embedding_model = HuggingFaceEmbeddings(model_name=embedding_model)
         self.vector_store: Optional[LangChainInMemoryVectorStore] = None
         self.documents: List[Document] = []
     

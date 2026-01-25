@@ -5,6 +5,8 @@ import os
 from typing import List, Optional, Dict, Any, Union, Generator
 from datetime import datetime
 
+from langchain_ollama import ChatOllama
+
 from pydantic import SecretStr
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, trim_messages
@@ -18,8 +20,10 @@ class RAGAgent:
     
     def __init__(
         self,
-        api_key: Optional[str] = None,
-        model_name: str = "gpt-5",
+        api_key: Optional[str] = None,  # Not needed for local
+        #model_name: str = "mistralai/ministral-3-3b",  # Your local model windows
+        model_name: str = "llama3.2:3b",  # Your local model linux
+        
         temperature: float = 0.7,
         max_tokens: int = 4000,
         memory_window: int = 10
@@ -28,13 +32,24 @@ class RAGAgent:
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         if not self.api_key:
             raise ValueError("OpenAI API key is required")
-        # Initialize LLM
-        self.llm = ChatOpenAI(
-            api_key=SecretStr(self.api_key),
+        ## Initialize LLM with local LM Studio endpoint
+        # self.llm = ChatOpenAI(
+        #     base_url="http://localhost:1234/v1",  # LM Studio local URL
+        #     #base_url="http://localhost:11434/api/chat",  # Ollama local URL
+        #     api_key="dummy",  # Not required, but LangChain may need it
+        #     model=model_name,
+        #     temperature=temperature,
+        #     max_completion_tokens=max_tokens
+        # )
+        # Initialize LLM with Ollama local endpoint
+        self.llm = ChatOllama(
+            base_url="http://localhost:11434",
+            api_key="dummy",
             model=model_name,
             temperature=temperature,
-            max_completion_tokens=max_tokens
+            num_predict=max_tokens  # Nota: usa num_predict en lugar de max_tokens
         )
+
         
         # Initialize RAG components
         self.vector_store = InMemoryVectorStore(api_key=self.api_key)

@@ -4,6 +4,9 @@ langchain-openai>=0.3.0
 langchain-community>=0.3.0
 langchain-core>=0.3.0
 openai>=1.0.0
+langchain-huggingface
+sentence-transformers
+langchain-ollama
 
 # Web interface
 gradio<6.0

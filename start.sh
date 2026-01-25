@@ -16,6 +16,12 @@ source venv/bin/activate
 
 # Install dependencies
 echo "📥 Installing dependencies..."
+
+# Configurar carpetas temporales locales para evitar llenar /tmp del sistema
+export TMPDIR="$(pwd)/.tmp_build"
+export PIP_CACHE_DIR="$(pwd)/.pip_cache"
+mkdir -p "$TMPDIR" "$PIP_CACHE_DIR"
+
 pip install -r requirements.txt
 
 # Check if .env file exists
