@@ -12,7 +12,8 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, trim_messages
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
-from ..rag import ChromaVectorStore, RAGRetriever, DocumentProcessor
+from ..infrastructure.vector_stores.chroma_store import ChromaVectorStore
+from ..rag import RAGRetriever, DocumentProcessor
 
 
 class RAGAgent:
@@ -207,14 +208,15 @@ class RAGAgent:
         if len(self.vector_store) == 0:
             return []
         
-        docs = self.vector_store.similarity_search(query, k=k)
+        search_results = self.vector_store.similarity_search(query, k=k)
         
         results = []
-        for doc in docs:
+        for result in search_results:
             results.append({
-                "content": doc.page_content,
-                "metadata": doc.metadata,
-                "preview": doc.page_content[:200] + "..." if len(doc.page_content) > 200 else doc.page_content
+                "content": result.chunk.content,
+                "metadata": result.chunk.metadata,
+                "preview": result.chunk.content[:200] + "..." if len(result.chunk.content) > 200 else result.chunk.content,
+                "score": result.similarity_score
             })
         
         return results

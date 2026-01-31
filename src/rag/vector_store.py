@@ -6,10 +6,10 @@ Data is saved to disk for long-term persistence.
 """
 import os
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import List, Optional
 import logging
 
-from langchain_core.documents import Document
+from ..domain.models import Document, DocumentChunk, SearchResult
 from langchain_huggingface import HuggingFaceEmbeddings
 import chromadb
 
@@ -58,22 +58,28 @@ class ChromaVectorStore:
         """Add documents to the Chroma vector store.
         
         Args:
-            documents: List of LangChain Document objects to add.
+            documents: List of Document objects (from domain.models).
         """
         if not documents:
             logger.warning("No documents provided to add_documents()")
             return
         
-        # Embed documents
-        texts = [doc.page_content for doc in documents]
+        # Extract all chunks from documents
+        all_chunks = []
+        for doc in documents:
+            all_chunks.extend(doc.chunks)
+        
+        if not all_chunks:
+            logger.warning("No chunks found in documents")
+            return
+        
+        # Embed chunks
+        texts = [chunk.content for chunk in all_chunks]
         embeddings = self.embeddings.embed_documents(texts)
         
-        # Create metadata
-        metadatas = [doc.metadata for doc in documents]
-        ids = [
-            f"doc_{i}_{hash(doc.page_content) % 10000}"
-            for i, doc in enumerate(documents)
-        ]
+        # Create metadata for each chunk
+        metadatas = [chunk.metadata for chunk in all_chunks]
+        ids = [chunk.id for chunk in all_chunks]
         
         # Add to Chroma
         self.collection.add(
@@ -83,9 +89,9 @@ class ChromaVectorStore:
             documents=texts
         )
         
-        logger.info(f"Added {len(documents)} documents to Chroma")
+        logger.info(f"Added {len(all_chunks)} chunks from {len(documents)} documents to Chroma")
     
-    def similarity_search(self, query: str, k: int = 4) -> List[Document]:
+    def similarity_search(self, query: str, k: int = 4) -> List[SearchResult]:
         """Search for similar documents.
         
         Args:
@@ -93,41 +99,7 @@ class ChromaVectorStore:
             k: Number of results to return.
             
         Returns:
-            List of Document objects ranked by similarity.
-        """
-        if self.collection.count() == 0:
-            logger.warning("Vector store is empty")
-            return []
-        
-        # Embed query
-        query_embedding = self.embeddings.embed_query(query)
-        
-        # Search in Chroma
-        results = self.collection.query(
-            query_embeddings=[query_embedding],
-            n_results=k
-        )
-        
-        # Convert back to Document objects
-        documents = []
-        for i, doc_text in enumerate(results["documents"][0]):
-            metadata = results["metadatas"][0][i] if results["metadatas"][0] else {}
-            documents.append(Document(
-                page_content=doc_text,
-                metadata=metadata
-            ))
-        
-        return documents
-    
-    def similarity_search_with_score(self, query: str, k: int = 4) -> List[Tuple[Document, float]]:
-        """Search for similar documents with relevance scores.
-        
-        Args:
-            query: The search query string.
-            k: Number of results to return.
-            
-        Returns:
-            List of tuples (Document, score) where score is between 0 and 1.
+            List of SearchResult objects ranked by similarity.
         """
         if self.collection.count() == 0:
             logger.warning("Vector store is empty")
@@ -143,20 +115,30 @@ class ChromaVectorStore:
             include=["documents", "metadatas", "distances"]
         )
         
-        # Convert distances to similarity scores (0-1 range)
-        documents_with_scores = []
-        for i, doc_text in enumerate(results["documents"][0]):
+        # Convert to SearchResult objects
+        search_results = []
+        for i, chunk_text in enumerate(results["documents"][0]):
             distance = results["distances"][0][i]
-            # Convert distance to similarity (1 - distance)
-            similarity = 1 - distance
+            similarity = 1 - distance  # Convert distance to similarity
             metadata = results["metadatas"][0][i] if results["metadatas"][0] else {}
+            chunk_id = results["ids"][0][i]
             
-            documents_with_scores.append((
-                Document(page_content=doc_text, metadata=metadata),
-                similarity
-            ))
+            chunk = DocumentChunk(
+                id=chunk_id,
+                content=chunk_text,
+                document_id=metadata.get("document_id", ""),
+                chunk_index=metadata.get("chunk_index", 0),
+                metadata=metadata
+            )
+            
+            search_result = SearchResult(
+                chunk=chunk,
+                similarity_score=similarity,
+                rank=i + 1
+            )
+            search_results.append(search_result)
         
-        return documents_with_scores
+        return search_results
     
     def clear(self) -> None:
         """Clear all documents from the vector store."""
@@ -185,33 +167,33 @@ class RAGRetriever:
         
         Args:
             vector_store: The vector store to retrieve from
-            min_score: Minimum similarity score (0-1, higher is more similar for cosine similarity)
+            min_score: Minimum similarity score (0-1, higher is more similar)
         """
         self.vector_store = vector_store
         self.min_score = min_score
     
-    def retrieve(self, query: str, k: int = 4) -> List[Document]:
-        """Retrieve relevant documents for a query."""
-        # Get documents with scores
-        docs_with_scores = self.vector_store.similarity_search_with_score(query, k=k)
+    def retrieve(self, query: str, k: int = 4) -> List[SearchResult]:
+        """Retrieve relevant search results for a query."""
+        # Get search results with scores
+        search_results = self.vector_store.similarity_search(query, k=k)
         
-        # Filter by minimum score (higher scores are better in cosine similarity)
-        filtered_docs = [
-            doc for doc, score in docs_with_scores 
-            if score >= self.min_score
+        # Filter by minimum score
+        filtered_results = [
+            result for result in search_results 
+            if result.similarity_score >= self.min_score
         ]
         
-        return filtered_docs if filtered_docs else [doc for doc, _ in docs_with_scores[:k//2]]
+        return filtered_results if filtered_results else search_results[:k//2]
     
     def get_context(self, query: str, max_tokens: int = 2000) -> str:
         """Get context string for the query, respecting token limits."""
-        relevant_docs = self.retrieve(query)
+        relevant_results = self.retrieve(query)
         
         context_parts = []
         current_length = 0
         
-        for doc in relevant_docs:
-            content = doc.page_content
+        for result in relevant_results:
+            content = result.chunk.content
             # Rough token estimation (1 token ≈ 4 characters)
             content_tokens = len(content) // 4
             
