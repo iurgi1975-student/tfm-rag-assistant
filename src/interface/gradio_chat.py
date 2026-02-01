@@ -6,16 +6,21 @@ from typing import List, Tuple, Dict
 import gradio as gr
 
 from ..agent import RAGAgent
-from ..rag import DocumentProcessor
+from ..application.services.document_service import DocumentService
 
 
 class ChatInterface:
     """Gradio-based chat interface for the RAG agent."""
     
-    def __init__(self, agent: RAGAgent, title: str = "AI Assistant with RAG"):
+    def __init__(
+        self, 
+        agent: RAGAgent,
+        document_service: DocumentService,
+        title: str = "AI Assistant with RAG"
+    ):
         self.agent = agent
+        self.document_service = document_service
         self.title = title
-        self.doc_processor = DocumentProcessor()
         
     def process_uploaded_files(self, files: List[str]) -> str:
         """Process uploaded files and add them to the knowledge base."""
@@ -27,20 +32,14 @@ class ChatInterface:
         
         for file_path in files:
             try:
-                # Process the document
-                documents = self.doc_processor.load_document(file_path)
-                
-                # Add to knowledge base
-                self.agent.add_documents_from_processor(documents)
-                
-                total_docs += len(documents)
+                count = self.document_service.ingest_document(file_path)
+                total_docs += count
                 processed_files.append(os.path.basename(file_path))
-                
             except Exception as e:
                 return f"Error processing {os.path.basename(file_path)}: {str(e)}"
         
         files_list = ", ".join(processed_files)
-        return f"Successfully processed {len(processed_files)} file(s): {files_list}. Added {total_docs} document chunks to knowledge base."
+        return f"Successfully processed {len(processed_files)} file(s): {files_list}. Added {total_docs} document(s) to knowledge base."
     
     def add_text_to_knowledge_base(self, text: str) -> str:
         """Add text directly to the knowledge base."""
@@ -48,15 +47,14 @@ class ChatInterface:
             return "No text provided."
         
         try:
-            documents = self.doc_processor.process_text_input(text, "manual_input")
-            self.agent.add_documents_from_processor(documents)
-            return f"Added text to knowledge base ({len(documents)} chunks)."
+            count = self.document_service.ingest_text(text, "manual_input")
+            return f"Added text to knowledge base ({count} document)."
         except Exception as e:
             return f"Error adding text: {str(e)}"
     
     def clear_knowledge_base(self) -> str:
         """Clear the knowledge base."""
-        self.agent.clear_knowledge_base()
+        self.document_service.clear_knowledge_base()
         return "Knowledge base cleared."
     
     def clear_chat_history(self) -> Tuple[List[dict], str]:
@@ -66,8 +64,8 @@ class ChatInterface:
     
     def get_knowledge_base_status(self) -> str:
         """Get the current status of the knowledge base."""
-        info = self.agent.get_knowledge_base_info()
-        return f"Documents in knowledge base: {info['document_count']}"
+        stats = self.document_service.get_document_stats()
+        return f"Documents in knowledge base: {stats['total_documents']}"
     
     def chat_response(self, message: str, history: List[dict]) -> Tuple[List[dict], str]:
         """Generate chat response."""

@@ -144,7 +144,11 @@ class ChromaVectorStore(VectorStoreRepository):
         Returns:
             Count of documents.
         """
-        return self.collection.count()
+        try:
+            return self.collection.count()
+        except Exception:
+            # If collection doesn't exist or is empty, return 0
+            return 0
     
     def __len__(self) -> int:
         """Return the number of documents via len() operator."""

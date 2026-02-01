@@ -12,6 +12,9 @@ import argparse
 from dotenv import load_dotenv
 
 from src.agent import RAGAgent
+from src.application.services.document_service import DocumentService
+from src.infrastructure.vector_stores.chroma_store import ChromaVectorStore
+from src.infrastructure.document_processor import DocumentProcessor
 from src.interface import ChatInterface
 
 def load_environment():
@@ -74,20 +77,40 @@ def main():
         print("Please set your OpenAI API key in the .env file")
         sys.exit(1)
     
-    # Create the RAG agent
+    # Create shared ChromaVectorStore (DDD infrastructure layer)
+    print("💾 Initializing Vector Store...")
+    from src.infrastructure.vector_stores.chroma_store import ChromaVectorStore
+    vector_store = ChromaVectorStore(persist_dir="./chroma_db")
+    print("✅ Vector Store initialized successfully!")
+    
+    # Create the RAG agent with injected vector_store
     print("🧠 Initializing RAG Agent...")
     agent = create_agent(
         api_key=api_key,
         model_name=args.model,
         temperature=args.temperature
     )
+    # Inject the shared vector_store
+    agent.vector_store = vector_store
+    agent.retriever.vector_store = vector_store
     
     print("✅ RAG Agent initialized successfully!")
+    
+    # Create DocumentService using the SAME vector store instance
+    print("📄 Initializing Document Service...")
+    document_processor = DocumentProcessor(chunk_size=1000, chunk_overlap=200)
+    document_service = DocumentService(
+        vector_repository=vector_store,  # Use the same instance!
+        document_processor=document_processor
+    )
+    
+    print("✅ Document Service initialized successfully!")
     
     # Create the chat interface
     print("🎨 Creating chat interface...")
     chat_interface = ChatInterface(
-        agent=agent,
+        agent=agent,  # Para chat y búsqueda (legacy)
+        document_service=document_service,  # Para gestión de documentos (nuevo DDD)
         title="🤖 RAG AI Assistant with LangChain + Langflow"
     )
     
