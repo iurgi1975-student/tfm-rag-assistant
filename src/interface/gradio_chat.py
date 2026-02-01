@@ -5,9 +5,9 @@ import os
 from typing import List, Tuple, Dict
 import gradio as gr
 
-from ..agent import RAGAgent
 from ..application.services.document_service import DocumentService
 from ..application.services.rag_service import RAGService
+from ..application.services.chat_service import ChatService
 
 
 class ChatInterface:
@@ -15,14 +15,14 @@ class ChatInterface:
     
     def __init__(
         self, 
-        agent: RAGAgent,
         document_service: DocumentService,
         rag_service: RAGService,
+        chat_service: ChatService,
         title: str = "AI Assistant with RAG"
     ):
-        self.agent = agent
         self.document_service = document_service
         self.rag_service = rag_service
+        self.chat_service = chat_service
         self.title = title
         
     def process_uploaded_files(self, files: List[str]) -> str:
@@ -62,7 +62,7 @@ class ChatInterface:
     
     def clear_chat_history(self) -> Tuple[List[dict], str]:
         """Clear the chat history."""
-        self.agent.clear_conversation_history()
+        self.chat_service.clear_history()
         return [], "Chat history cleared."
     
     def get_knowledge_base_status(self) -> str:
@@ -76,8 +76,8 @@ class ChatInterface:
             return history, ""
         
         try:
-            # Get response from agent (ensuring we get a string, not a generator)
-            response = self.agent.chat(message, stream=False)
+            # Get response from chat service
+            response = self.chat_service.chat(message, stream=False, use_rag=True)
             
             # Ensure response is a string
             if not isinstance(response, str):

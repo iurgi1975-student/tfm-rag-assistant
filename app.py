@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 from src.agent import RAGAgent
 from src.application.services.document_service import DocumentService
 from src.application.services.rag_service import RAGService
+from src.application.services.chat_service import ChatService
 from src.infrastructure.vector_stores.chroma_store import ChromaVectorStore
 from src.infrastructure.document_processor import DocumentProcessor
 from src.infrastructure.llm import OllamaLLM
@@ -95,19 +96,6 @@ def main():
     )
     print(f"✅ LLM initialized successfully! (Model: {llm.get_model_name()})")
     
-    # Create the RAG agent with injected vector_store
-    print("🧠 Initializing RAG Agent...")
-    agent = create_agent(
-        api_key=api_key,
-        model_name=args.model,
-        temperature=args.temperature
-    )
-    # Inject the shared vector_store
-    agent.vector_store = vector_store
-    agent.retriever.vector_store = vector_store
-    
-    print("✅ RAG Agent initialized successfully!")
-    
     # Create DocumentService using the SAME vector store instance
     print("📄 Initializing Document Service...")
     document_processor = DocumentProcessor(chunk_size=1000, chunk_overlap=200)
@@ -128,12 +116,22 @@ def main():
     
     print("✅ RAG Service initialized successfully!")
     
+    # Create ChatService for conversational AI
+    print("💬 Initializing Chat Service...")
+    chat_service = ChatService(
+        llm=llm,
+        rag_service=rag_service,
+        memory_window=10
+    )
+    
+    print("✅ Chat Service initialized successfully!")
+    
     # Create the chat interface
     print("🎨 Creating chat interface...")
     chat_interface = ChatInterface(
-        agent=agent,  # Para chat (legacy, temporal)
         document_service=document_service,  # Para gestión de documentos (DDD)
         rag_service=rag_service,  # Para búsquedas (DDD)
+        chat_service=chat_service,  # Para chat (DDD)
         title="🤖 RAG AI Assistant with LangChain + Langflow"
     )
     
