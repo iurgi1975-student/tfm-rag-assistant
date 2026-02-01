@@ -23,20 +23,14 @@ class ChromaVectorStore(VectorStoreRepository):
     def __init__(
         self,
         persist_dir: str = "./chroma_db",
-        embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2",
-        api_key: Optional[str] = None
+        embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
     ):
         """Initialize ChromaDB vector store.
         
         Args:
             persist_dir: Directory where Chroma data is stored.
             embedding_model: HuggingFace embedding model name.
-            api_key: Optional API key (for future compatibility).
         """
-        import os
-        if api_key:
-            os.environ["OPENAI_API_KEY"] = api_key
-        
         self.persist_dir = Path(persist_dir)
         self.persist_dir.mkdir(parents=True, exist_ok=True)
         

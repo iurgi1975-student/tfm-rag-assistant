@@ -93,7 +93,7 @@ class DocumentProcessor:
         Returns:
             List with a single Document object.
         """
-        # Create a fake LangChain document to split
+        # Create a fake LangChain document to split / es temporal para que pueda procesarlo
         from langchain_core.documents import Document as LangChainDocument
         
         langchain_doc = LangChainDocument(

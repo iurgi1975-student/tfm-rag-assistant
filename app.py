@@ -50,7 +50,7 @@ def create_agent(api_key=None, model_name="llama3.2:3b", temperature=0.7):
 def main():
     """Main application entry point."""
     parser = argparse.ArgumentParser(description="RAG AI Assistant Integration")
-    parser.add_argument("--host", default="0.0.0.0", help="Host to run the interface on")
+    parser.add_argument("--host", default="localhost", help="Host to run the interface on")
     parser.add_argument("--port", default=int(os.getenv("PORT", 7860)), type=int, help="Port to run the interface on")
     parser.add_argument("--model", default="llama3.2:3b", help="OpenAI model to use")
     parser.add_argument("--temperature", default=0.7, type=float, help="Temperature for the model")

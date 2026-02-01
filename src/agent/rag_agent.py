@@ -28,7 +28,7 @@ class RAGAgent:
         temperature: float = 0.7,
         max_tokens: int = 4000,
         memory_window: int = 10,
-        chroma_persist_dir: str = "./chroma_db"
+        ChromaVectorStore_persist_dir: str = "./chroma_db"
     ):
         """Initialize the RAG Agent.
         
@@ -63,7 +63,7 @@ class RAGAgent:
 
         
         # Initialize RAG components with persistent Chroma storage
-        self.vector_store = ChromaVectorStore(persist_dir=chroma_persist_dir, api_key=self.api_key)
+        self.vector_store = ChromaVectorStore(persist_dir=chroma_persist_dir)
         self.retriever = RAGRetriever(self.vector_store)
         self.doc_processor = DocumentProcessor()
         

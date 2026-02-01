@@ -59,3 +59,13 @@ class VectorStoreRepository(ABC):
             Integer count of documents.
         """
         pass
+    
+    def __len__(self) -> int:
+        """Return the number of documents via len() operator.
+        
+        This is a convenience method that calls get_document_count().
+        Implementations can override if they have a more efficient way.
+        """
+        return self.get_document_count()
+
+        pass
