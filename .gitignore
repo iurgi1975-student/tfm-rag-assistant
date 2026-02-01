@@ -210,7 +210,8 @@ $RECYCLE.BIN/
 *.model
 *.weights
 model/
-models/
+# Ignore ML model folders but NOT src/domain/models (DDD models)
+/models/
 checkpoints/
 logs/
 wandb/
