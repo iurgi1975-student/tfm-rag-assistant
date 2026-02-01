@@ -16,6 +16,7 @@ from src.application.services.document_service import DocumentService
 from src.application.services.rag_service import RAGService
 from src.infrastructure.vector_stores.chroma_store import ChromaVectorStore
 from src.infrastructure.document_processor import DocumentProcessor
+from src.infrastructure.llm import OllamaLLM
 from src.interface import ChatInterface
 
 def load_environment():
@@ -83,6 +84,16 @@ def main():
     from src.infrastructure.vector_stores.chroma_store import ChromaVectorStore
     vector_store = ChromaVectorStore(persist_dir="./chroma_db")
     print("✅ Vector Store initialized successfully!")
+    
+    # Create LLM (DDD infrastructure layer with dependency injection)
+    print("🤖 Initializing LLM...")
+    llm = OllamaLLM(
+        model=args.model,
+        base_url="http://localhost:11434",
+        temperature=args.temperature,
+        max_tokens=4000
+    )
+    print(f"✅ LLM initialized successfully! (Model: {llm.get_model_name()})")
     
     # Create the RAG agent with injected vector_store
     print("🧠 Initializing RAG Agent...")

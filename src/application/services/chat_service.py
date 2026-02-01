@@ -4,10 +4,10 @@ Chat Service - Orchestrates conversational AI operations.
 from typing import List, Union, Generator, Optional
 from datetime import datetime
 
-from langchain_ollama import ChatOllama
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, trim_messages
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
+from ...domain.repositories import LLMRepository
 from .rag_service import RAGService
 
 
@@ -16,7 +16,7 @@ class ChatService:
     
     def __init__(
         self,
-        llm: ChatOllama,
+        llm: LLMRepository,
         rag_service: RAGService,
         memory_window: int = 10,
         system_prompt_template: Optional[str] = None
@@ -24,7 +24,7 @@ class ChatService:
         """Initialize the chat service.
         
         Args:
-            llm: Language model instance.
+            llm: Language model repository instance.
             rag_service: Service for retrieving relevant context.
             memory_window: Number of recent messages to keep in history.
             system_prompt_template: Custom system prompt template.
@@ -64,20 +64,16 @@ class ChatService:
         # Get trimmed chat history
         chat_history = self._get_trimmed_history()
         
-        # Create prompt and chain
-        prompt = ChatPromptTemplate.from_messages([
-            SystemMessage(content=system_prompt),
-            MessagesPlaceholder(variable_name="chat_history"),
-            ("human", "{input}")
-        ])
-        
-        chain = prompt | self._llm
+        # Build messages for LLM
+        messages = [SystemMessage(content=system_prompt)]
+        messages.extend(chat_history)
+        messages.append(HumanMessage(content=message))
         
         # Get response
         if stream:
-            return self._handle_streaming(message, chain, chat_history)
+            return self._handle_streaming(message, messages)
         else:
-            return self._handle_non_streaming(message, chain, chat_history)
+            return self._handle_non_streaming(message, messages)
     
     def clear_history(self) -> None:
         """Clear conversation history."""
@@ -130,18 +126,11 @@ Current time: {current_time}"""
     def _handle_non_streaming(
         self, 
         message: str, 
-        chain, 
-        chat_history: List
+        messages: List
     ) -> str:
         """Handle non-streaming response."""
-        # Invoke chain
-        response = chain.invoke({
-            "input": message,
-            "chat_history": chat_history
-        })
-        
-        # Extract response text
-        response_text = response.content
+        # Invoke LLM
+        response_text = self._llm.invoke(messages)
         
         # Update history
         self._chat_history.append(HumanMessage(content=message))
@@ -152,21 +141,15 @@ Current time: {current_time}"""
     def _handle_streaming(
         self, 
         message: str, 
-        chain, 
-        chat_history: List
+        messages: List
     ) -> Generator:
         """Handle streaming response."""
         def generate():
             full_response = ""
             
-            for chunk in chain.stream({
-                "input": message,
-                "chat_history": chat_history
-            }):
-                if hasattr(chunk, 'content'):
-                    chunk_text = chunk.content
-                    full_response += chunk_text
-                    yield chunk_text
+            for chunk_text in self._llm.stream(messages):
+                full_response += chunk_text
+                yield chunk_text
             
             # Update history after streaming completes
             self._chat_history.append(HumanMessage(content=message))
