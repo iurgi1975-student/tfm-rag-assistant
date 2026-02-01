@@ -28,7 +28,7 @@ class RAGAgent:
         temperature: float = 0.7,
         max_tokens: int = 4000,
         memory_window: int = 10,
-        ChromaVectorStore_persist_dir: str = "./chroma_db"
+        chroma_persist_dir: str = "./chroma_db"
     ):
         """Initialize the RAG Agent.
         

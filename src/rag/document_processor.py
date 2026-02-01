@@ -3,13 +3,13 @@ Document processing and ingestion for RAG system.
 """
 from typing import List
 from pathlib import Path
-from datetime import datetime
-import uuid
 
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_core.documents import Document as LangChainDocument
 
-from ..domain.models import Document, DocumentChunk
+from ..domain.models import Document
+from ..infrastructure.mappers import DocumentMapper
 
 
 class DocumentProcessor:
@@ -23,6 +23,7 @@ class DocumentProcessor:
             chunk_overlap=chunk_overlap,
             length_function=len,
         )
+        self.mapper = DocumentMapper()
     
     def load_document(self, file_path: str) -> List[Document]:
         """Load a document based on its file extension.
@@ -49,37 +50,18 @@ class DocumentProcessor:
         Returns:
             List with a single Document object.
         """
-        # Load PDF using LangChain
         loader = PyPDFLoader(file_path)
         langchain_docs = loader.load()
-        
-        # Combine all pages into one text
-        full_text = "\n".join([doc.page_content for doc in langchain_docs])
-        
-        # Split into chunks
         langchain_chunks = self.text_splitter.split_documents(langchain_docs)
         
-        # Create our Document model
-        doc_id = f"doc_{uuid.uuid4().hex[:12]}"
-        document = Document(
-            id=doc_id,
+        document = self.mapper.langchain_to_domain(
+            langchain_docs=langchain_docs,
+            langchain_chunks=langchain_chunks,
             title=Path(file_path).stem,
-            content=full_text,
             source_type="pdf",
             source_path=str(file_path),
-            metadata={"filename": Path(file_path).name}
+            additional_metadata={"filename": Path(file_path).name}
         )
-        
-        # Convert LangChain chunks to our DocumentChunk model
-        for chunk_index, chunk in enumerate(langchain_chunks):
-            doc_chunk = DocumentChunk(
-                id=f"{doc_id}_chunk_{chunk_index}",
-                content=chunk.page_content,
-                document_id=doc_id,
-                chunk_index=chunk_index,
-                metadata=chunk.metadata
-            )
-            document.chunks.append(doc_chunk)
         
         return [document]
     
@@ -93,37 +75,21 @@ class DocumentProcessor:
         Returns:
             List with a single Document object.
         """
-        # Create a fake LangChain document to split / es temporal para que pueda procesarlo
-        from langchain_core.documents import Document as LangChainDocument
-        
         langchain_doc = LangChainDocument(
             page_content=text,
             metadata={"source": source, "type": "text"}
         )
         
-        # Split into chunks
         langchain_chunks = self.text_splitter.split_documents([langchain_doc])
         
-        # Create our Document model
-        doc_id = f"doc_{uuid.uuid4().hex[:12]}"
-        document = Document(
-            id=doc_id,
+        document = self.mapper.langchain_to_domain(
+            langchain_docs=[langchain_doc],
+            langchain_chunks=langchain_chunks,
             title=source,
-            content=text,
             source_type="text",
             source_path=None,
-            metadata={"source": source}
+            additional_metadata={"source": source}
         )
         
-        # Convert chunks
-        for chunk_index, chunk in enumerate(langchain_chunks):
-            doc_chunk = DocumentChunk(
-                id=f"{doc_id}_chunk_{chunk_index}",
-                content=chunk.page_content,
-                document_id=doc_id,
-                chunk_index=chunk_index,
-                metadata=chunk.metadata
-            )
-            document.chunks.append(doc_chunk)
-        
         return [document]
+        
