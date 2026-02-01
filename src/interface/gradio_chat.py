@@ -7,6 +7,7 @@ import gradio as gr
 
 from ..agent import RAGAgent
 from ..application.services.document_service import DocumentService
+from ..application.services.rag_service import RAGService
 
 
 class ChatInterface:
@@ -16,10 +17,12 @@ class ChatInterface:
         self, 
         agent: RAGAgent,
         document_service: DocumentService,
+        rag_service: RAGService,
         title: str = "AI Assistant with RAG"
     ):
         self.agent = agent
         self.document_service = document_service
+        self.rag_service = rag_service
         self.title = title
         
     def process_uploaded_files(self, files: List[str]) -> str:
@@ -98,7 +101,8 @@ class ChatInterface:
             return "Please enter a search query."
         
         try:
-            results = self.agent.search_documents(query, k=3)
+            # Use RAGService instead of agent
+            results = self.rag_service.search(query, k=3)
             
             if not results:
                 return "No relevant documents found."
@@ -106,10 +110,10 @@ class ChatInterface:
             output = f"Found {len(results)} relevant document(s):\n\n"
             
             for i, result in enumerate(results, 1):
-                metadata = result["metadata"]
-                source = metadata.get("source", "Unknown")
-                output += f"**Result {i}** (Source: {os.path.basename(source)})\n"
-                output += f"{result['preview']}\n\n"
+                source = result.chunk.metadata.get("source", "Unknown")
+                preview = result.chunk.content[:200] + "..." if len(result.chunk.content) > 200 else result.chunk.content
+                output += f"**Result {i}** (Score: {result.similarity_score:.2f}, Source: {os.path.basename(source)})\n"
+                output += f"{preview}\n\n"
             
             return output
             

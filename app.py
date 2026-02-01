@@ -13,6 +13,7 @@ from dotenv import load_dotenv
 
 from src.agent import RAGAgent
 from src.application.services.document_service import DocumentService
+from src.application.services.rag_service import RAGService
 from src.infrastructure.vector_stores.chroma_store import ChromaVectorStore
 from src.infrastructure.document_processor import DocumentProcessor
 from src.interface import ChatInterface
@@ -106,11 +107,22 @@ def main():
     
     print("✅ Document Service initialized successfully!")
     
+    # Create RAGService for document search and retrieval
+    print("🔍 Initializing RAG Service...")
+    rag_service = RAGService(
+        vector_repository=vector_store,
+        min_score=0.0,
+        default_k=4
+    )
+    
+    print("✅ RAG Service initialized successfully!")
+    
     # Create the chat interface
     print("🎨 Creating chat interface...")
     chat_interface = ChatInterface(
-        agent=agent,  # Para chat y búsqueda (legacy)
-        document_service=document_service,  # Para gestión de documentos (nuevo DDD)
+        agent=agent,  # Para chat (legacy, temporal)
+        document_service=document_service,  # Para gestión de documentos (DDD)
+        rag_service=rag_service,  # Para búsquedas (DDD)
         title="🤖 RAG AI Assistant with LangChain + Langflow"
     )
     

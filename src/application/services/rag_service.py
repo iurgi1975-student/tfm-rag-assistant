@@ -13,7 +13,7 @@ class RAGService:
     def __init__(
         self, 
         vector_repository: VectorStoreRepository,
-        min_score: float = 0.3,
+        min_score: float = 0.0,
         default_k: int = 4
     ):
         """Initialize the RAG service.
@@ -44,18 +44,19 @@ class RAGService:
             List of search results.
         """
         k = k or self._default_k
-        min_score = min_score or self._min_score
+        min_score = min_score if min_score is not None else self._min_score
         
         # Search in repository
-        results = self._repository.search(query, k=k)
+        results = self._repository.similarity_search(query, k=k)
         
-        # Filter by score
-        filtered_results = [
-            result for result in results 
-            if result.score >= min_score
-        ]
+        # Filter by score only if min_score > 0
+        if min_score > 0:
+            results = [
+                result for result in results 
+                if result.similarity_score >= min_score
+            ]
         
-        return filtered_results
+        return results
     
     def get_context(
         self, 
@@ -85,15 +86,15 @@ class RAGService:
         
         for i, result in enumerate(results, 1):
             # Estimate tokens (rough: ~4 chars per token)
-            chunk_tokens = len(result.content) // 4
+            chunk_tokens = len(result.chunk.content) // 4
             
             if current_tokens + chunk_tokens > max_tokens:
                 break
             
             context_parts.append(
-                f"[Document {i}] (Relevance: {result.score:.2f})\n"
-                f"Source: {result.metadata.get('source', 'Unknown')}\n"
-                f"{result.content}\n"
+                f"[Document {i}] (Relevance: {result.similarity_score:.2f})\n"
+                f"Source: {result.chunk.metadata.get('source', 'Unknown')}\n"
+                f"{result.chunk.content}\n"
             )
             current_tokens += chunk_tokens
         
@@ -116,7 +117,7 @@ class RAGService:
         
         sources = set()
         for result in results:
-            source = result.metadata.get('source') or result.metadata.get('filename')
+            source = result.chunk.metadata.get('source') or result.chunk.metadata.get('filename')
             if source:
                 sources.add(source)
         
