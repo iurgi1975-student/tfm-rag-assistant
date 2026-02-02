@@ -2,9 +2,10 @@
 
 from typing import List, Generator
 from langchain_ollama import ChatOllama
-from langchain_core.messages import BaseMessage
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
 from ...domain.repositories.llm_repository import LLMRepository
+from ...domain.models import ChatMessage, MessageRole
 
 
 class OllamaLLM(LLMRepository):
@@ -37,28 +38,32 @@ class OllamaLLM(LLMRepository):
             num_predict=max_tokens
         )
     
-    def invoke(self, messages: List[BaseMessage]) -> str:
+    def invoke(self, messages: List[ChatMessage]) -> str:
         """Generate a response for the given messages.
         
         Args:
-            messages: List of conversation messages.
+            messages: List of ChatMessage from domain.
             
         Returns:
             Generated response text.
         """
-        response = self._llm.invoke(messages)
+        # Convert domain ChatMessage to LangChain messages
+        langchain_messages = self._convert_to_langchain(messages)
+        response = self._llm.invoke(langchain_messages)
         return str(response.content) if response.content else ""
     
-    def stream(self, messages: List[BaseMessage]) -> Generator[str, None, None]:
+    def stream(self, messages: List[ChatMessage]) -> Generator[str, None, None]:
         """Stream a response for the given messages.
         
         Args:
-            messages: List of conversation messages.
+            messages: List of ChatMessage from domain.
             
         Yields:
             Chunks of the generated response.
         """
-        for chunk in self._llm.stream(messages):
+        # Convert domain ChatMessage to LangChain messages
+        langchain_messages = self._convert_to_langchain(messages)
+        for chunk in self._llm.stream(langchain_messages):
             content = str(chunk.content) if chunk.content else ""
             if content:
                 yield content
@@ -70,3 +75,22 @@ class OllamaLLM(LLMRepository):
             Model name string.
         """
         return self._model_name
+    
+    def _convert_to_langchain(self, messages: List[ChatMessage]) -> List:
+        """Convert domain ChatMessage to LangChain messages.
+        
+        Args:
+            messages: List of domain ChatMessage.
+            
+        Returns:
+            List of LangChain message objects.
+        """
+        langchain_messages = []
+        for msg in messages:
+            if msg.role == MessageRole.USER:
+                langchain_messages.append(HumanMessage(content=msg.content))
+            elif msg.role == MessageRole.ASSISTANT:
+                langchain_messages.append(AIMessage(content=msg.content))
+            elif msg.role == MessageRole.SYSTEM:
+                langchain_messages.append(SystemMessage(content=msg.content))
+        return langchain_messages

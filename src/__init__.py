@@ -2,15 +2,9 @@
 Source package initialization.
 """
 
-# Make imports available at package level
-from .agent import RAGAgent
-from .rag import DocumentProcessor, ChromaVectorStore, RAGRetriever
+# Make main interface available at package level
 from .interface import ChatInterface
 
 __all__ = [
-    "RAGAgent",
-    "DocumentProcessor", 
-    "ChromaVectorStore",
-    "RAGRetriever",
     "ChatInterface"
 ]

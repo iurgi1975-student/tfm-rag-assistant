@@ -4,8 +4,10 @@ Defines the contract for any LLM implementation (Ollama, OpenAI, Anthropic, etc.
 """
 
 from abc import ABC, abstractmethod
-from typing import List, Union, Generator
-from langchain_core.messages import BaseMessage
+from typing import List, Union, Generator, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ..models import ChatMessage
 
 
 class LLMRepository(ABC):
@@ -16,11 +18,11 @@ class LLMRepository(ABC):
     """
     
     @abstractmethod
-    def invoke(self, messages: List[BaseMessage]) -> str:
+    def invoke(self, messages: List['ChatMessage']) -> str:
         """Generate a response for the given messages.
         
         Args:
-            messages: List of conversation messages.
+            messages: List of ChatMessage from domain.
             
         Returns:
             Generated response text.
@@ -28,11 +30,11 @@ class LLMRepository(ABC):
         pass
     
     @abstractmethod
-    def stream(self, messages: List[BaseMessage]) -> Generator[str, None, None]:
+    def stream(self, messages: List['ChatMessage']) -> Generator[str, None, None]:
         """Stream a response for the given messages.
         
         Args:
-            messages: List of conversation messages.
+            messages: List of ChatMessage from domain.
             
         Yields:
             Chunks of the generated response.

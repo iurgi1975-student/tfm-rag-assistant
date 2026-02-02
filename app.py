@@ -11,7 +11,6 @@ sys.path.append(str(Path(__file__).parent / "src"))
 import argparse
 from dotenv import load_dotenv
 
-from src.agent import RAGAgent
 from src.application.services.document_service import DocumentService
 from src.application.services.rag_service import RAGService
 from src.application.services.chat_service import ChatService
@@ -34,23 +33,6 @@ def load_environment():
             print("⚠️  Using .env.example - please copy it to .env and add your API keys!")
         else:
             print("⚠️  No .env file found. Please create one with your API keys.")
-
-
-def create_agent(api_key=None, model_name="llama3.2:3b", temperature=0.7):
-    """Create and configure the RAG agent."""
-    try:
-        agent = RAGAgent(
-            api_key=api_key,
-            model_name=model_name,
-            temperature=temperature,
-            max_tokens=4000,
-            memory_window=10
-        )
-        return agent
-    except Exception as e:
-        print(f"❌ Error creating agent: {e}")
-        print("Make sure you have set your OPENAI_API_KEY in the .env file")
-        sys.exit(1)
 
 
 def main():

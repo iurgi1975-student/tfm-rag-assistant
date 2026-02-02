@@ -4,10 +4,8 @@ Chat Service - Orchestrates conversational AI operations.
 from typing import List, Union, Generator, Optional
 from datetime import datetime
 
-from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, trim_messages
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-
 from ...domain.repositories import LLMRepository
+from ...domain.models import ChatMessage, MessageRole
 from .rag_service import RAGService
 
 
@@ -34,8 +32,8 @@ class ChatService:
         self._memory_window = memory_window
         self._system_prompt_template = system_prompt_template or self._get_default_system_prompt()
         
-        # Conversation history
-        self._chat_history: List[Union[HumanMessage, AIMessage]] = []
+        # Conversation history using domain ChatMessage
+        self._chat_history: List[ChatMessage] = []
     
     def chat(
         self, 
@@ -64,10 +62,12 @@ class ChatService:
         # Get trimmed chat history
         chat_history = self._get_trimmed_history()
         
-        # Build messages for LLM
-        messages = [SystemMessage(content=system_prompt)]
+        # Build messages for LLM using domain ChatMessage
+        messages = [
+            ChatMessage(role=MessageRole.SYSTEM, content=system_prompt)
+        ]
         messages.extend(chat_history)
-        messages.append(HumanMessage(content=message))
+        messages.append(ChatMessage(role=MessageRole.USER, content=message))
         
         # Get response
         if stream:
@@ -79,11 +79,11 @@ class ChatService:
         """Clear conversation history."""
         self._chat_history.clear()
     
-    def get_history(self) -> List[Union[HumanMessage, AIMessage]]:
+    def get_history(self) -> List[ChatMessage]:
         """Get current conversation history.
         
         Returns:
-            List of messages in history.
+            List of ChatMessage in history.
         """
         return self._chat_history.copy()
     
@@ -111,37 +111,32 @@ Context from documents:
 
 Current time: {current_time}"""
     
-    def _get_trimmed_history(self) -> List[Union[HumanMessage, AIMessage]]:
+    def _get_trimmed_history(self) -> List[ChatMessage]:
         """Trim history to memory window."""
-        return trim_messages(
-            self._chat_history,
-            token_counter=len,
-            max_tokens=self._memory_window,
-            strategy="last",
-            start_on="human",
-            include_system=False,
-            allow_partial=False
-        )
+        # Simple trimming: keep last N messages
+        if len(self._chat_history) > self._memory_window:
+            return self._chat_history[-self._memory_window:]
+        return self._chat_history
     
     def _handle_non_streaming(
         self, 
         message: str, 
-        messages: List
+        messages: List[ChatMessage]
     ) -> str:
         """Handle non-streaming response."""
         # Invoke LLM
         response_text = self._llm.invoke(messages)
         
-        # Update history
-        self._chat_history.append(HumanMessage(content=message))
-        self._chat_history.append(AIMessage(content=response_text))
+        # Update history with domain ChatMessage
+        self._chat_history.append(ChatMessage(role=MessageRole.USER, content=message))
+        self._chat_history.append(ChatMessage(role=MessageRole.ASSISTANT, content=response_text))
         
         return response_text
     
     def _handle_streaming(
         self, 
         message: str, 
-        messages: List
+        messages: List[ChatMessage]
     ) -> Generator:
         """Handle streaming response."""
         def generate():
@@ -151,8 +146,8 @@ Current time: {current_time}"""
                 full_response += chunk_text
                 yield chunk_text
             
-            # Update history after streaming completes
-            self._chat_history.append(HumanMessage(content=message))
-            self._chat_history.append(AIMessage(content=full_response))
+            # Update history after streaming completes with domain ChatMessage
+            self._chat_history.append(ChatMessage(role=MessageRole.USER, content=message))
+            self._chat_history.append(ChatMessage(role=MessageRole.ASSISTANT, content=full_response))
         
         return generate()
