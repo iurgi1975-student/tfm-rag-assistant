@@ -11,12 +11,7 @@ sys.path.append(str(Path(__file__).parent / "src"))
 import argparse
 from dotenv import load_dotenv
 
-from src.application.services.document_service import DocumentService
-from src.application.services.rag_service import RAGService
-from src.application.services.chat_service import ChatService
-from src.infrastructure.vector_stores.chroma_store import ChromaVectorStore
-from src.infrastructure.document_processor import DocumentProcessor
-from src.infrastructure.llm import OllamaLLM
+from src.application.container import AppContainer
 from src.interface import ChatInterface
 
 def load_environment():
@@ -55,84 +50,51 @@ def main():
     print(f"🤖 Model: {args.model}")
     print(f"🌡️  Temperature: {args.temperature}")
     
-    # Get API key
+    # Check API key
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         print("❌ OPENAI_API_KEY not found in environment variables!")
         print("Please set your OpenAI API key in the .env file")
         sys.exit(1)
     
-    # Create shared ChromaVectorStore (DDD infrastructure layer)
-    print("💾 Initializing Vector Store...")
-    from src.infrastructure.vector_stores.chroma_store import ChromaVectorStore
-    vector_store = ChromaVectorStore(persist_dir="./chroma_db")
-    print("✅ Vector Store initialized successfully!")
-    
-    # Create LLM (DDD infrastructure layer with dependency injection)
-    print("🤖 Initializing LLM...")
-    llm = OllamaLLM(
-        model=args.model,
-        base_url="http://localhost:11434",
-        temperature=args.temperature,
-        max_tokens=4000
-    )
-    print(f"✅ LLM initialized successfully! (Model: {llm.get_model_name()})")
-    
-    # Create DocumentService using the SAME vector store instance
-    print("📄 Initializing Document Service...")
-    document_processor = DocumentProcessor(chunk_size=1000, chunk_overlap=200)
-    document_service = DocumentService(
-        vector_repository=vector_store,  # Use the same instance!
-        document_processor=document_processor
-    )
-    
-    print("✅ Document Service initialized successfully!")
-    
-    # Create RAGService for document search and retrieval
-    print("🔍 Initializing RAG Service...")
-    rag_service = RAGService(
-        vector_repository=vector_store,
-        min_score=0.0,
-        default_k=4
-    )
-    
-    print("✅ RAG Service initialized successfully!")
-    
-    # Create ChatService for conversational AI
-    print("💬 Initializing Chat Service...")
-    chat_service = ChatService(
-        llm=llm,
-        rag_service=rag_service,
-        memory_window=10
-    )
-    
-    print("✅ Chat Service initialized successfully!")
-    
-    # Create the chat interface
-    print("🎨 Creating chat interface...")
-    chat_interface = ChatInterface(
-        document_service=document_service,  # Para gestión de documentos (DDD)
-        rag_service=rag_service,  # Para búsquedas (DDD)
-        chat_service=chat_service,  # Para chat (DDD)
-        title="🤖 RAG AI Assistant with LangChain + Langflow"
-    )
-    
-    print("✅ Interface created successfully!")
-    
-    # Launch the interface
-    print("\n" + "="*60)
-    print("🎉 RAG AI Assistant is ready!")
-    print("="*60)
-    print(f"🌐 Access the interface at: http://{args.host}:{args.port}")
-    
-    print("\n💡 Tips:")
-    print("- Upload documents in the 'Document Management' tab")
-    print("- Start chatting in the 'Chat' tab")
-    print("- The AI will use your documents to provide better answers")
-    print("- Use Ctrl+C to stop the application")
-    print("="*60)
-    
     try:
+        # Create dependency injection container
+        container = AppContainer(
+            model_name=args.model,
+            temperature=args.temperature,
+            chroma_dir="./chroma_db",
+            ollama_url="http://localhost:11434",
+            chunk_size=1000,
+            chunk_overlap=200,
+            rag_top_k=4,
+            rag_min_score=0.0,
+            memory_window=10
+        )
+        
+        # Create the chat interface with injected services
+        print("🎨 Creating chat interface...")
+        chat_interface = ChatInterface(
+            document_service=container.document_service,
+            rag_service=container.rag_service,
+            chat_service=container.chat_service,
+            title="🤖 RAG AI Assistant with DDD Architecture"
+        )
+        
+        print("✅ Interface created successfully!")
+        
+        # Launch the interface
+        print("\n" + "="*60)
+        print("🎉 RAG AI Assistant is ready!")
+        print("="*60)
+        print(f"🌐 Access the interface at: http://{args.host}:{args.port}")
+        
+        print("\n💡 Tips:")
+        print("- Upload documents in the 'Document Management' tab")
+        print("- Search documents to test RAG retrieval")
+        print("- Start chatting with AI that uses your documents")
+        print("- Use Ctrl+C to stop the application")
+        print("="*60)
+        
         # Launch the Gradio interface
         chat_interface.launch(
             server_name=args.host,
@@ -140,11 +102,14 @@ def main():
             share=args.share,
             debug=args.debug
         )
+        
     except KeyboardInterrupt:
         print("\n👋 Shutting down RAG AI Assistant...")
         sys.exit(0)
     except Exception as e:
-        print(f"❌ Error launching interface: {e}")
+        print(f"❌ Error: {e}")
+        import traceback
+        traceback.print_exc()
         sys.exit(1)
 
 
