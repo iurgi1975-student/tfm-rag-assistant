@@ -49,14 +49,8 @@ def main():
     print(f"📍 Host: {args.host}:{args.port}")
     print(f"🤖 Model: {args.model}")
     print(f"🌡️  Temperature: {args.temperature}")
-    
-    # Check API key
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        print("❌ OPENAI_API_KEY not found in environment variables!")
-        print("Please set your OpenAI API key in the .env file")
-        sys.exit(1)
-    
+   
+   
     try:
         # Create dependency injection container
         container = AppContainer(
