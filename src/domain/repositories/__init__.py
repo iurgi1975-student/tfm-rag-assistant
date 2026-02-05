@@ -5,5 +5,6 @@ This allows switching between Chroma, PostgreSQL, in-memory, etc. without changi
 """
 from .vector_store_repository import VectorStoreRepository
 from .llm_repository import LLMRepository
+from .chat_history_repository import ChatHistoryRepository
 
-__all__ = ["VectorStoreRepository", "LLMRepository"]
+__all__ = ["VectorStoreRepository", "LLMRepository", "ChatHistoryRepository"]

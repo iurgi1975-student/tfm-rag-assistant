@@ -4,7 +4,7 @@ Chat Service - Orchestrates conversational AI operations.
 from typing import List, Union, Generator, Optional
 from datetime import datetime
 
-from ...domain.repositories import LLMRepository
+from ...domain.repositories import LLMRepository, ChatHistoryRepository
 from ...domain.models import ChatMessage, MessageRole
 from .rag_service import RAGService
 
@@ -16,6 +16,8 @@ class ChatService:
         self,
         llm: LLMRepository,
         rag_service: RAGService,
+        chat_repository: Optional[ChatHistoryRepository] = None,
+        session_id: str = "default",
         memory_window: int = 10,
         system_prompt_template: Optional[str] = None
     ):
@@ -24,16 +26,33 @@ class ChatService:
         Args:
             llm: Language model repository instance.
             rag_service: Service for retrieving relevant context.
+            chat_repository: Optional repository for persisting chat history.
+            session_id: Unique identifier for the chat session.
             memory_window: Number of recent messages to keep in history.
             system_prompt_template: Custom system prompt template.
         """
         self._llm = llm
         self._rag_service = rag_service
+        self._chat_repository = chat_repository
+        self._session_id = session_id
         self._memory_window = memory_window
         self._system_prompt_template = system_prompt_template or self._get_default_system_prompt()
         
-        # Conversation history using domain ChatMessage
-        self._chat_history: List[ChatMessage] = []
+        # Load conversation history from persistence if available
+        if self._chat_repository:
+            try:
+                self._chat_history: List[ChatMessage] = self._chat_repository.get_history(
+                    session_id, 
+                    limit=memory_window
+                )
+                if self._chat_history:
+                    print(f"📚 Loaded {len(self._chat_history)} previous messages from chat history")
+                    print(f"💡 Keeping last {memory_window} messages in memory to manage context size")
+            except Exception as e:
+                print(f"⚠️ Could not load chat history: {e}")
+                self._chat_history: List[ChatMessage] = []
+        else:
+            self._chat_history: List[ChatMessage] = []
     
     def chat(
         self, 
@@ -76,8 +95,12 @@ class ChatService:
             return self._handle_non_streaming(message, messages)
     
     def clear_history(self) -> None:
-        """Clear conversation history."""
+        """Clear conversation history (memory + persistence)."""
         self._chat_history.clear()
+        
+        # Also clear from database if repository is available
+        if self._chat_repository:
+            self._chat_repository.clear_history(self._session_id)
     
     def get_history(self) -> List[ChatMessage]:
         """Get current conversation history.
@@ -127,9 +150,18 @@ Current time: {current_time}"""
         # Invoke LLM
         response_text = self._llm.invoke(messages)
         
-        # Update history with domain ChatMessage
-        self._chat_history.append(ChatMessage(role=MessageRole.USER, content=message))
-        self._chat_history.append(ChatMessage(role=MessageRole.ASSISTANT, content=response_text))
+        # Create message objects
+        user_message = ChatMessage(role=MessageRole.USER, content=message)
+        assistant_message = ChatMessage(role=MessageRole.ASSISTANT, content=response_text)
+        
+        # Update in-memory history
+        self._chat_history.append(user_message)
+        self._chat_history.append(assistant_message)
+        
+        # Persist to database if repository is available
+        if self._chat_repository:
+            self._chat_repository.save_message(self._session_id, user_message)
+            self._chat_repository.save_message(self._session_id, assistant_message)
         
         return response_text
     
@@ -146,8 +178,17 @@ Current time: {current_time}"""
                 full_response += chunk_text
                 yield chunk_text
             
-            # Update history after streaming completes with domain ChatMessage
-            self._chat_history.append(ChatMessage(role=MessageRole.USER, content=message))
-            self._chat_history.append(ChatMessage(role=MessageRole.ASSISTANT, content=full_response))
+            # Create message objects after streaming completes
+            user_message = ChatMessage(role=MessageRole.USER, content=message)
+            assistant_message = ChatMessage(role=MessageRole.ASSISTANT, content=full_response)
+            
+            # Update in-memory history
+            self._chat_history.append(user_message)
+            self._chat_history.append(assistant_message)
+            
+            # Persist to database if repository is available
+            if self._chat_repository:
+                self._chat_repository.save_message(self._session_id, user_message)
+                self._chat_repository.save_message(self._session_id, assistant_message)
         
         return generate()

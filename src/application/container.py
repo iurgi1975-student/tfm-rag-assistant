@@ -8,6 +8,7 @@ from typing import Optional
 from ..infrastructure.vector_stores.chroma_store import ChromaVectorStore
 from ..infrastructure.document_processor import DocumentProcessor
 from ..infrastructure.llm import OllamaLLM
+from ..infrastructure.persistence import SQLiteChatRepository
 from .services.document_service import DocumentService
 from .services.rag_service import RAGService
 from .services.chat_service import ChatService
@@ -26,7 +27,10 @@ class AppContainer:
         chunk_overlap: int = 200,
         rag_top_k: int = 4,
         rag_min_score: float = 0.0,
-        memory_window: int = 10
+        memory_window: int = 10,
+        enable_chat_persistence: bool = True,
+        chat_db_path: str = "./data/chat_history.db",
+        default_session_id: str = "main"
     ):
         """Initialize container with configuration.
         
@@ -40,6 +44,9 @@ class AppContainer:
             rag_top_k: Number of documents to retrieve.
             rag_min_score: Minimum similarity score.
             memory_window: Chat history window size.
+            enable_chat_persistence: Enable SQLite chat history persistence.
+            chat_db_path: Path to SQLite database for chat history.
+            default_session_id: Default session identifier for chats.
         """
         self.model_name = model_name
         self.temperature = temperature
@@ -50,11 +57,15 @@ class AppContainer:
         self.rag_top_k = rag_top_k
         self.rag_min_score = rag_min_score
         self.memory_window = memory_window
+        self.enable_chat_persistence = enable_chat_persistence
+        self.chat_db_path = chat_db_path
+        self.default_session_id = default_session_id
         
         # Singleton instances
         self._vector_store: Optional[ChromaVectorStore] = None
         self._llm: Optional[OllamaLLM] = None
         self._document_processor: Optional[DocumentProcessor] = None
+        self._chat_repository: Optional[SQLiteChatRepository] = None
         self._document_service: Optional[DocumentService] = None
         self._rag_service: Optional[RAGService] = None
         self._chat_service: Optional[ChatService] = None
@@ -118,6 +129,15 @@ class AppContainer:
         return self._rag_service
     
     @property
+    def chat_repository(self) -> Optional[SQLiteChatRepository]:
+        """Get or create chat history repository."""
+        if self.enable_chat_persistence and self._chat_repository is None:
+            print("💾 Initializing Chat Persistence (SQLite)...")
+            self._chat_repository = SQLiteChatRepository(db_path=self.chat_db_path)
+            print("✅ Chat Persistence initialized!")
+        return self._chat_repository
+    
+    @property
     def chat_service(self) -> ChatService:
         """Get or create chat service."""
         if self._chat_service is None:
@@ -125,6 +145,8 @@ class AppContainer:
             self._chat_service = ChatService(
                 llm=self.llm,
                 rag_service=self.rag_service,
+                chat_repository=self.chat_repository,
+                session_id=self.default_session_id,
                 memory_window=self.memory_window
             )
             print("✅ Chat Service initialized!")
@@ -135,6 +157,7 @@ class AppContainer:
         self._vector_store = None
         self._llm = None
         self._document_processor = None
+        self._chat_repository = None
         self._document_service = None
         self._rag_service = None
         self._chat_service = None
