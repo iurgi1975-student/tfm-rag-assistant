@@ -35,8 +35,9 @@ def main():
     parser = argparse.ArgumentParser(description="RAG AI Assistant Integration")
     parser.add_argument("--host", default="localhost", help="Host to run the interface on")
     parser.add_argument("--port", default=int(os.getenv("PORT", 7860)), type=int, help="Port to run the interface on")
-    parser.add_argument("--model", default="llama3.2:3b", help="OpenAI model to use")
+    parser.add_argument("--model", default="llama3.2:3b", help="Model to use (Ollama or Google Gemini)")
     parser.add_argument("--temperature", default=0.7, type=float, help="Temperature for the model")
+    parser.add_argument("--use-google", action="store_true", help="Use Google Gemini instead of Ollama")
     parser.add_argument("--share", action="store_true", help="Create a public Gradio link")
     parser.add_argument("--debug", action="store_true", help="Enable debug mode")
     
@@ -48,16 +49,25 @@ def main():
     print("🚀 Starting RAG AI Assistant...")
     print(f"📍 Host: {args.host}:{args.port}")
     print(f"🤖 Model: {args.model}")
-    print(f"🌡️  Temperature: {args.temperature}")
+    print(f"� Provider: {'Google Gemini' if args.use_google else 'Ollama'}")
+    print(f"�🌡️  Temperature: {args.temperature}")
    
    
     try:
+        # Get Google API key if using Google
+        google_api_key = os.getenv("GOOGLE_API_KEY") if args.use_google else None
+        
+        if args.use_google and not google_api_key:
+            raise ValueError("❌ GOOGLE_API_KEY not found in environment variables. Please add it to your .env file.")
+        
         # Create dependency injection container
         container = AppContainer(
             model_name=args.model,
             temperature=args.temperature,
             chroma_dir="./chroma_db",
             ollama_url="http://localhost:11434",
+            google_api_key=google_api_key,
+            use_google=args.use_google,
             chunk_size=1000,
             chunk_overlap=200,
             rag_top_k=4,

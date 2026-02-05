@@ -7,7 +7,7 @@ from typing import Optional
 
 from ..infrastructure.vector_stores.chroma_store import ChromaVectorStore
 from ..infrastructure.document_processor import DocumentProcessor
-from ..infrastructure.llm import OllamaLLM
+from ..infrastructure.llm import OllamaLLM, GoogleGeminiLLM
 from ..infrastructure.persistence import SQLiteChatRepository
 from .services.document_service import DocumentService
 from .services.rag_service import RAGService
@@ -23,6 +23,8 @@ class AppContainer:
         temperature: float = 0.7,
         chroma_dir: str = "./chroma_db",
         ollama_url: str = "http://localhost:11434",
+        google_api_key: Optional[str] = None,
+        use_google: bool = False,
         chunk_size: int = 1000,
         chunk_overlap: int = 200,
         rag_top_k: int = 4,
@@ -35,10 +37,12 @@ class AppContainer:
         """Initialize container with configuration.
         
         Args:
-            model_name: Ollama model name.
+            model_name: Model name (Ollama or Google Gemini).
             temperature: LLM temperature.
             chroma_dir: ChromaDB persistence directory.
             ollama_url: Ollama API base URL.
+            google_api_key: Google AI Studio API key.
+            use_google: Use Google Gemini instead of Ollama.
             chunk_size: Document chunk size.
             chunk_overlap: Overlap between chunks.
             rag_top_k: Number of documents to retrieve.
@@ -52,6 +56,8 @@ class AppContainer:
         self.temperature = temperature
         self.chroma_dir = chroma_dir
         self.ollama_url = ollama_url
+        self.google_api_key = google_api_key
+        self.use_google = use_google
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
         self.rag_top_k = rag_top_k
@@ -80,16 +86,28 @@ class AppContainer:
         return self._vector_store
     
     @property
-    def llm(self) -> OllamaLLM:
+    def llm(self):
         """Get or create LLM instance."""
         if self._llm is None:
             print("🤖 Initializing LLM...")
-            self._llm = OllamaLLM(
-                model=self.model_name,
-                base_url=self.ollama_url,
-                temperature=self.temperature,
-                max_tokens=4000
-            )
+            if self.use_google:
+                if not self.google_api_key:
+                    raise ValueError("Google API key is required when use_google=True")
+                print("   Using Google Gemini...")
+                self._llm = GoogleGeminiLLM(
+                    api_key=self.google_api_key,
+                    model=self.model_name,
+                    temperature=self.temperature,
+                    max_tokens=4000
+                )
+            else:
+                print("   Using Ollama...")
+                self._llm = OllamaLLM(
+                    model=self.model_name,
+                    base_url=self.ollama_url,
+                    temperature=self.temperature,
+                    max_tokens=4000
+                )
             print(f"✅ LLM initialized! (Model: {self._llm.get_model_name()})")
         return self._llm
     
