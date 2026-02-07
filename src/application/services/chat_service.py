@@ -70,10 +70,12 @@ class ChatService:
         Returns:
             Response string or generator for streaming.
         """
-        # Get context from RAG if enabled
+        # Get context from RAG if enabled and available
         context = ""
-        if use_rag:
+        if use_rag and self._rag_service:
             context = self._rag_service.get_context(message)
+        elif use_rag and not self._rag_service:
+            print("Warning: use_rag=True but no RAG service is configured. Continuing without context.")
         
         # Create system prompt with context
         system_prompt = self._create_system_prompt(context)
