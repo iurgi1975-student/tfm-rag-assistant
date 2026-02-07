@@ -174,8 +174,9 @@ class SQLiteChatRepository(ChatHistoryRepository):
         cursor = conn.cursor()
         
         cursor.execute("""
-            SELECT DISTINCT session_id 
-            FROM chat_messages 
+            SELECT session_id
+            FROM chat_messages
+            GROUP BY session_id
             ORDER BY MAX(created_at) DESC
         """)
         
