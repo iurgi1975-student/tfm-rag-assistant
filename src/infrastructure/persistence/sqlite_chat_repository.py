@@ -10,6 +10,7 @@ from datetime import datetime
 
 from ...domain.repositories import ChatHistoryRepository
 from ...domain.models import ChatMessage, MessageRole
+from ..mappers import ChatMessageMapper
 
 
 class SQLiteChatRepository(ChatHistoryRepository):
@@ -23,6 +24,7 @@ class SQLiteChatRepository(ChatHistoryRepository):
         """
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        self.mapper = ChatMessageMapper()
         self._init_database()
     
     def _init_database(self) -> None:
@@ -67,15 +69,13 @@ class SQLiteChatRepository(ChatHistoryRepository):
         conn = sqlite3.connect(str(self.db_path))
         cursor = conn.cursor()
         
+        # Use mapper to convert domain object to persistence tuple
+        role, content, timestamp = self.mapper.to_persistence(message)
+        
         cursor.execute("""
             INSERT INTO chat_messages (session_id, role, content, timestamp)
             VALUES (?, ?, ?, ?)
-        """, (
-            session_id,
-            message.role.value,
-            message.content,
-            message.timestamp.isoformat() if message.timestamp else datetime.utcnow().isoformat()
-        ))
+        """, (session_id, role, content, timestamp))
         
         conn.commit()
         conn.close()
@@ -123,19 +123,12 @@ class SQLiteChatRepository(ChatHistoryRepository):
         rows = cursor.fetchall()
         conn.close()
         
-        # Convert to ChatMessage objects
+        # Convert to ChatMessage objects using mapper
         messages = []
         for row in rows:
-            try:
-                messages.append(ChatMessage(
-                    role=MessageRole(row[0]),
-                    content=row[1],
-                    timestamp=datetime.fromisoformat(row[2]) if row[2] else None
-                ))
-            except (ValueError, TypeError) as e:
-                # Skip malformed messages
-                print(f"Warning: Skipping malformed message: {e}")
-                continue
+            message = self.mapper.to_domain(row)
+            if message:
+                messages.append(message)
         
         return messages
     

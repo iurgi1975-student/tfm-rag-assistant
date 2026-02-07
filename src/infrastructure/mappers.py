@@ -1,13 +1,14 @@
 """
 Mappers for converting between external libraries and domain models.
 """
-from typing import List
+from typing import List, Tuple, Optional
 import uuid
 from pathlib import Path
+from datetime import datetime
 
 from langchain_core.documents import Document as LangChainDocument
 
-from ..domain.models import Document, DocumentChunk
+from ..domain.models import Document, DocumentChunk, ChatMessage, MessageRole
 
 
 class DocumentMapper:
@@ -66,3 +67,43 @@ class DocumentMapper:
             document.chunks.append(doc_chunk)
         
         return document
+
+
+class ChatMessageMapper:
+    """Maps between SQLite rows and ChatMessage domain models."""
+    
+    @staticmethod
+    def to_domain(row: Tuple) -> Optional[ChatMessage]:
+        """Convert SQLite row to ChatMessage domain object.
+        
+        Args:
+            row: Tuple from SQLite query (role, content, timestamp).
+            
+        Returns:
+            ChatMessage object or None if conversion fails.
+        """
+        try:
+            return ChatMessage(
+                role=MessageRole(row[0]),
+                content=row[1],
+                timestamp=datetime.fromisoformat(row[2]) if row[2] else None
+            )
+        except (ValueError, TypeError, IndexError) as e:
+            print(f"Warning: Failed to convert row to ChatMessage: {e}")
+            return None
+    
+    @staticmethod
+    def to_persistence(message: ChatMessage) -> Tuple[str, str, str]:
+        """Convert ChatMessage to SQLite tuple.
+        
+        Args:
+            message: ChatMessage domain object.
+            
+        Returns:
+            Tuple of (role, content, timestamp) for SQLite insert.
+        """
+        return (
+            message.role.value,
+            message.content,
+            message.timestamp.isoformat() if message.timestamp else datetime.utcnow().isoformat()
+        )
