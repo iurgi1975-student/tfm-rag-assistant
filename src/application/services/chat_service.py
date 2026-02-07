@@ -123,6 +123,7 @@ class ChatService:
         """Get default system prompt template."""
         return """You are a helpful AI assistant with access to a knowledge base of documents.
 You can answer questions using both your general knowledge and information from the provided documents.
+IMPORTANT: Focus ONLY on the user's CURRENT question. Previous conversation is for context only.
 
 When answering questions:
 1. If relevant information is available in the provided context, prioritize it
@@ -130,7 +131,7 @@ When answering questions:
 3. Be concise but thorough in your responses
 4. If you cannot find relevant information in the documents, say so and provide what help you can from your general knowledge
 5. Always be helpful, accurate, and honest about the limitations of your knowledge
-
+Remember: Focus on the CURRENT question, not previous ones.
 Context from documents:
 {context}
 
