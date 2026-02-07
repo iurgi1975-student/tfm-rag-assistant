@@ -20,6 +20,7 @@ __pycache__
 
 # Virtual environments
 venv/
+venv_linux/
 .venv/
 env/
 .env/
@@ -71,6 +72,7 @@ docker-compose*.yml
 Jenkinsfile
 
 # Testing
+tests/
 coverage/
 .coverage
 .nyc_output
@@ -81,7 +83,9 @@ setup.py
 
 # Vector stores and models (should be mounted or downloaded at runtime)
 vectorstore/
+chroma_db/
 models/
 embeddings/
 documents/
 uploads/
+data/

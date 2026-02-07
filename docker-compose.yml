@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  rag-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rag-assistant
+    ports:
+      - "7860:7860"
+    environment:
+      - PORT=7860
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - GRADIO_AUTH_USERS=${GRADIO_AUTH_USERS:-admin:admin123}
+      - OLLAMA_URL=http://host.docker.internal:11434
+    volumes:
+      # Persistent volumes for data
+      - rag-chroma-db:/app/chroma_db
+      - rag-data:/app/data
+      - ./logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - rag-network
+    #command: ["python", "app.py", "--host", "0.0.0.0", "--port", "7860"]
+    command: ["python", "app.py", "--host", "0.0.0.0", "--port", "7860", "--use-google", "--model", "gemini-2.5-flash"]
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:7860/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    extra_hosts:
+      # Para conectar con Ollama en el host
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  rag-chroma-db:
+    driver: local
+  rag-data:
+    driver: local
+
+networks:
+  rag-network:
+    driver: bridge

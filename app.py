@@ -87,12 +87,15 @@ def main():
         if args.use_google and not google_api_key:
             raise ValueError("❌ GOOGLE_API_KEY not found in environment variables. Please add it to your .env file.")
         
+        # Get Ollama URL from environment or use default
+        ollama_url = os.getenv("OLLAMA_URL", "http://localhost:11434")
+        
         # Create dependency injection container
         container = AppContainer(
             model_name=args.model,
             temperature=args.temperature,
             chroma_dir="./chroma_db",
-            ollama_url="http://localhost:11434",
+            ollama_url=ollama_url,
             google_api_key=google_api_key,
             use_google=args.use_google,
             chunk_size=1000,
