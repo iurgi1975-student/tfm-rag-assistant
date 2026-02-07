@@ -1,8 +1,8 @@
 """
-Gradio interface for the ChatGPT-like AI agent.
+Gradio interface for the ChatGPT-like AI agent with authentication.
 """
 import os
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Optional
 import gradio as gr
 
 from ..application.services.document_service import DocumentService
@@ -11,20 +11,21 @@ from ..application.services.chat_service import ChatService
 
 
 class ChatInterface:
-    """Gradio-based chat interface for the RAG agent."""
+    """Gradio-based chat interface for the RAG agent with login system."""
     
     def __init__(
         self, 
         document_service: DocumentService,
         rag_service: RAGService,
         chat_service: ChatService,
-        title: str = "AI Assistant with RAG"
+        title: str = "AI Assistant with RAG",
+        auth_users: Optional[Dict[str, str]] = None
     ):
         self.document_service = document_service
         self.rag_service = rag_service
         self.chat_service = chat_service
         self.title = title
-        
+        self.auth_users = auth_users
     def process_uploaded_files(self, files: List[str]) -> str:
         """Process uploaded files and add them to the knowledge base."""
         if not files:
@@ -121,7 +122,7 @@ class ChatInterface:
             return f"Error searching documents: {str(e)}"
     
     def create_interface(self) -> gr.Blocks:
-        """Create the Gradio interface."""
+        """Create the Gradio interface with optional login."""
         custom_css = """
         .chat-container {
             height: 500px;
@@ -132,146 +133,225 @@ class ChatInterface:
             padding: 20px;
             text-align: center;
         }
+        .login-container {
+            max-width: 400px;
+            margin: 50px auto;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
         """
         
         with gr.Blocks(title=self.title, css=custom_css) as interface:
-            gr.Markdown(f"# {self.title}")
-            gr.Markdown("Upload documents to enhance the AI's knowledge, then chat with your intelligent assistant!")
-            
-            with gr.Tab("💬 Chat"):
-                with gr.Row():
-                    with gr.Column(scale=4):
-                        chatbot = gr.Chatbot(
-                            type="messages",
-                            label="Conversation",
-                            height=500,
-                            elem_classes=["chat-container"]
-                        )
-                        
-                        with gr.Row():
-                            msg = gr.Textbox(
-                                placeholder="Type your message here...",
-                                label="Message",
-                                scale=4
-                            )
-                            submit_btn = gr.Button("Send", variant="primary", scale=1)
-                        
-                        clear_btn = gr.Button("Clear Chat History", variant="secondary")
+            # If authentication is enabled, create login screen
+            if self.auth_users:
+                with gr.Column(visible=True, elem_classes=["login-container"]) as login_screen:
+                    gr.Markdown(f"# 🔐 Login - {self.title}")
+                    gr.Markdown("Please enter your credentials to access the application")
                     
-                    with gr.Column(scale=1):
-                        status_display = gr.Textbox(
-                            label="Knowledge Base Status",
-                            value=self.get_knowledge_base_status(),
-                            interactive=False
-                        )
-                        
-                        refresh_status_btn = gr.Button("Refresh Status")
-            
-            with gr.Tab("📄 Document Management"):
-                with gr.Row():
-                    with gr.Column():
-                        gr.Markdown("### Upload Documents")
-                        file_upload = gr.File(
-                            label="Upload Files (PDF, TXT, DOCX)",
-                            file_count="multiple",
-                            file_types=[".pdf", ".txt", ".docx"],
-                            elem_classes=["upload-area"]
-                        )
-                        upload_btn = gr.Button("Process Files", variant="primary")
-                        upload_status = gr.Textbox(label="Upload Status", interactive=False)
-                        
-                        gr.Markdown("### Add Text Directly")
-                        text_input = gr.Textbox(
-                            label="Text to Add",
-                            placeholder="Paste text content here...",
-                            lines=5
-                        )
-                        add_text_btn = gr.Button("Add Text to Knowledge Base", variant="primary")
-                        text_status = gr.Textbox(label="Text Addition Status", interactive=False)
-                    
-                    with gr.Column():
-                        gr.Markdown("### Search Documents")
-                        search_query = gr.Textbox(
-                            label="Search Query",
-                            placeholder="Enter search terms..."
-                        )
-                        search_btn = gr.Button("Search Documents", variant="primary")
-                        search_results = gr.Textbox(
-                            label="Search Results",
-                            lines=10,
-                            interactive=False
-                        )
-                        
-                        gr.Markdown("### Knowledge Base Management")
-                        clear_kb_btn = gr.Button("Clear Knowledge Base", variant="stop")
-                        clear_kb_status = gr.Textbox(label="Clear Status", interactive=False)
-            
-            # Event handlers
-            def submit_message(message, history):
-                return self.chat_response(message, history)
-            
-            submit_btn.click(
-                submit_message,
-                inputs=[msg, chatbot],
-                outputs=[chatbot, msg]
-            )
-            
-            msg.submit(
-                submit_message,
-                inputs=[msg, chatbot],
-                outputs=[chatbot, msg]
-            )
-            
-            clear_btn.click(
-                self.clear_chat_history,
-                outputs=[chatbot, clear_btn]
-            )
-            
-            upload_btn.click(
-                self.process_uploaded_files,
-                inputs=[file_upload],
-                outputs=[upload_status]
-            )
-            
-            add_text_btn.click(
-                self.add_text_to_knowledge_base,
-                inputs=[text_input],
-                outputs=[text_status]
-            )
-            
-            search_btn.click(
-                self.search_documents,
-                inputs=[search_query],
-                outputs=[search_results]
-            )
-            
-            clear_kb_btn.click(
-                self.clear_knowledge_base,
-                outputs=[clear_kb_status]
-            )
-            
-            refresh_status_btn.click(
-                self.get_knowledge_base_status,
-                outputs=[status_display]
-            )
-            
-            # Update status after file upload
-            upload_btn.click(
-                self.get_knowledge_base_status,
-                outputs=[status_display]
-            )
-            
-            add_text_btn.click(
-                self.get_knowledge_base_status,
-                outputs=[status_display]
-            )
-            
-            clear_kb_btn.click(
-                self.get_knowledge_base_status,
-                outputs=[status_display]
-            )
+                    username_input = gr.Textbox(
+                        label="Username",
+                        placeholder="Enter your username",
+                        type="text"
+                    )
+                    password_input = gr.Textbox(
+                        label="Password",
+                        placeholder="Enter your password",
+                        type="password"
+                    )
+                    login_btn = gr.Button("🔓 Login", variant="primary", size="lg")
+                    login_status = gr.Markdown("", visible=True)
+                
+                with gr.Column(visible=False) as main_app:
+                    logout_btn = gr.Button("🚪 Logout", variant="secondary", size="sm")
+                    self._create_main_interface()
+                
+                def handle_login(username, password):
+                    if username in self.auth_users and self.auth_users[username] == password:
+                        return {
+                            login_screen: gr.Column(visible=False),
+                            main_app: gr.Column(visible=True),
+                            login_status: gr.Markdown(""),
+                            username_input: "",
+                            password_input: ""
+                        }
+                    else:
+                        return {
+                            login_screen: gr.Column(visible=True),
+                            main_app: gr.Column(visible=False),
+                            login_status: gr.Markdown("❌ Invalid credentials. Please try again."),
+                            username_input: username,
+                            password_input: ""
+                        }
+                
+                def handle_logout():
+                    return {
+                        login_screen: gr.Column(visible=True),
+                        main_app: gr.Column(visible=False),
+                        login_status: gr.Markdown("✅ Logged out successfully. Please login again."),
+                        username_input: "",
+                        password_input: ""
+                    }
+                
+                login_btn.click(
+                    handle_login,
+                    inputs=[username_input, password_input],
+                    outputs=[login_screen, main_app, login_status, username_input, password_input]
+                )
+                
+                password_input.submit(
+                    handle_login,
+                    inputs=[username_input, password_input],
+                    outputs=[login_screen, main_app, login_status, username_input, password_input]
+                )
+                
+                logout_btn.click(
+                    handle_logout,
+                    outputs=[login_screen, main_app, login_status, username_input, password_input]
+                )
+            else:
+                # No authentication, show main interface directly
+                self._create_main_interface()
         
         return interface
+    
+    def _create_main_interface(self):
+        """Create the main application interface."""
+        gr.Markdown(f"# {self.title}")
+        gr.Markdown("Upload documents to enhance the AI's knowledge, then chat with your intelligent assistant!")
+        
+        with gr.Tab("💬 Chat"):
+            with gr.Row():
+                with gr.Column(scale=4):
+                    chatbot = gr.Chatbot(
+                        type="messages",
+                        label="Conversation",
+                        height=500,
+                        elem_classes=["chat-container"]
+                    )
+                    
+                    with gr.Row():
+                        msg = gr.Textbox(
+                            placeholder="Type your message here...",
+                            label="Message",
+                            scale=4
+                        )
+                        submit_btn = gr.Button("Send", variant="primary", scale=1)
+                    
+                    clear_btn = gr.Button("Clear Chat History", variant="secondary")
+                
+                with gr.Column(scale=1):
+                    status_display = gr.Textbox(
+                        label="Knowledge Base Status",
+                        value=self.get_knowledge_base_status(),
+                        interactive=False
+                    )
+                    
+                    refresh_status_btn = gr.Button("Refresh Status")
+        
+        with gr.Tab("📄 Document Management"):
+            with gr.Row():
+                with gr.Column():
+                    gr.Markdown("### Upload Documents")
+                    file_upload = gr.File(
+                        label="Upload Files (PDF, TXT, DOCX)",
+                        file_count="multiple",
+                        file_types=[".pdf", ".txt", ".docx"],
+                        elem_classes=["upload-area"]
+                    )
+                    upload_btn = gr.Button("Process Files", variant="primary")
+                    upload_status = gr.Textbox(label="Upload Status", interactive=False)
+                    
+                    gr.Markdown("### Add Text Directly")
+                    text_input = gr.Textbox(
+                        label="Text to Add",
+                        placeholder="Paste text content here...",
+                        lines=5
+                    )
+                    add_text_btn = gr.Button("Add Text to Knowledge Base", variant="primary")
+                    text_status = gr.Textbox(label="Text Addition Status", interactive=False)
+                
+                with gr.Column():
+                    gr.Markdown("### Search Documents")
+                    search_query = gr.Textbox(
+                        label="Search Query",
+                        placeholder="Enter search terms..."
+                    )
+                    search_btn = gr.Button("Search Documents", variant="primary")
+                    search_results = gr.Textbox(
+                        label="Search Results",
+                        lines=10,
+                        interactive=False
+                    )
+                    
+                    gr.Markdown("### Knowledge Base Management")
+                    clear_kb_btn = gr.Button("Clear Knowledge Base", variant="stop")
+                    clear_kb_status = gr.Textbox(label="Clear Status", interactive=False)
+        
+        # Event handlers
+        def submit_message(message, history):
+            return self.chat_response(message, history)
+        
+        submit_btn.click(
+            submit_message,
+            inputs=[msg, chatbot],
+            outputs=[chatbot, msg]
+        )
+        
+        msg.submit(
+            submit_message,
+            inputs=[msg, chatbot],
+            outputs=[chatbot, msg]
+        )
+        
+        clear_btn.click(
+            self.clear_chat_history,
+            outputs=[chatbot, clear_btn]
+        )
+        
+        upload_btn.click(
+            self.process_uploaded_files,
+            inputs=[file_upload],
+            outputs=[upload_status]
+        )
+        
+        add_text_btn.click(
+            self.add_text_to_knowledge_base,
+            inputs=[text_input],
+            outputs=[text_status]
+        )
+        
+        search_btn.click(
+            self.search_documents,
+            inputs=[search_query],
+            outputs=[search_results]
+        )
+        
+        clear_kb_btn.click(
+            self.clear_knowledge_base,
+            outputs=[clear_kb_status]
+        )
+        
+        refresh_status_btn.click(
+            self.get_knowledge_base_status,
+            outputs=[status_display]
+        )
+        
+        # Update status after file upload
+        upload_btn.click(
+            self.get_knowledge_base_status,
+            outputs=[status_display]
+        )
+        
+        add_text_btn.click(
+            self.get_knowledge_base_status,
+            outputs=[status_display]
+        )
+        
+        clear_kb_btn.click(
+            self.get_knowledge_base_status,
+            outputs=[status_display]
+        )
     
     def launch(self, **kwargs):
         """Launch the Gradio interface."""

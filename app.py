@@ -30,6 +30,28 @@ def load_environment():
             print("⚠️  No .env file found. Please create one with your API keys.")
 
 
+def load_auth_users():
+    """Load authentication users from environment variables."""
+    auth_dict = {}
+    
+    # Load from environment variable (format: "user1:pass1,user2:pass2")
+    auth_string = os.getenv("GRADIO_AUTH_USERS", "")
+    
+    if auth_string:
+        for user_pass in auth_string.split(","):
+            if ":" in user_pass:
+                username, password = user_pass.strip().split(":", 1)
+                auth_dict[username] = password
+    
+    # If no users found in env, use default (for development only)
+    if not auth_dict:
+        print("⚠️  No GRADIO_AUTH_USERS found in environment. Using default credentials.")
+        print("⚠️  Default: admin / admin123 (NOT for production!)")
+        auth_dict = {"admin": "admin123"}
+    
+    return auth_dict
+
+
 def main():
     """Main application entry point."""
     parser = argparse.ArgumentParser(description="RAG AI Assistant Integration")
@@ -40,17 +62,22 @@ def main():
     parser.add_argument("--use-google", action="store_true", help="Use Google Gemini instead of Ollama")
     parser.add_argument("--share", action="store_true", help="Create a public Gradio link")
     parser.add_argument("--debug", action="store_true", help="Enable debug mode")
+    parser.add_argument("--no-auth", action="store_true", help="Disable authentication (for local development)")
     
     args = parser.parse_args()
     
     # Load environment variables
     load_environment()
     
+    # Load authentication users
+    auth_users = None if args.no_auth else load_auth_users()
+    
     print("🚀 Starting RAG AI Assistant...")
     print(f"📍 Host: {args.host}:{args.port}")
     print(f"🤖 Model: {args.model}")
-    print(f"� Provider: {'Google Gemini' if args.use_google else 'Ollama'}")
-    print(f"�🌡️  Temperature: {args.temperature}")
+    print(f"🔷 Provider: {'Google Gemini' if args.use_google else 'Ollama'}")
+    print(f"🌡️  Temperature: {args.temperature}")
+    print(f"🔒 Authentication: {'Disabled' if args.no_auth else 'Enabled'}")
    
    
     try:
@@ -81,7 +108,8 @@ def main():
             document_service=container.document_service,
             rag_service=container.rag_service,
             chat_service=container.chat_service,
-            title="🤖 RAG AI Assistant with DDD Architecture"
+            title="🤖 RAG AI Assistant with DDD Architecture",
+            auth_users=auth_users
         )
         
         print("✅ Interface created successfully!")
@@ -91,6 +119,11 @@ def main():
         print("🎉 RAG AI Assistant is ready!")
         print("="*60)
         print(f"🌐 Access the interface at: http://{args.host}:{args.port}")
+        
+        if auth_users:
+            print("\n🔐 Authentication enabled:")
+            print(f"   Users configured: {len(auth_users)}")
+            print("   Please login to access the application")
         
         print("\n💡 Tips:")
         print("- Upload documents in the 'Document Management' tab")
