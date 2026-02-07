@@ -48,20 +48,37 @@ class GoogleGeminiLLM(LLMRepository):
             Generated response text.
         """
         try:
-            # Convert domain messages to Gemini chat format
-            chat = self._model.start_chat(history=[])
+            # Extract system prompt if present
+            system_instruction = None
+            chat_messages = []
             
-            # Process all messages except the last one
-            for message in messages[:-1]:
-                if message.role == MessageRole.USER:
-                    chat.send_message(message.content)
-                elif message.role == MessageRole.ASSISTANT:
-                    # For assistant messages, we need to add them to history
-                    # Gemini handles this automatically in chat mode
-                    pass
+            for message in messages:
+                if message.role == MessageRole.SYSTEM:
+                    system_instruction = message.content
+                else:
+                    chat_messages.append(message)
+            
+            # Create model with system instruction if available
+            model = self._model
+            if system_instruction:
+                model = genai.GenerativeModel(
+                    self._model_name,
+                    system_instruction=system_instruction
+                )
+            
+            # Convert chat history to Gemini format
+            history = []
+            for i, msg in enumerate(chat_messages[:-1]):
+                if msg.role == MessageRole.USER:
+                    history.append({"role": "user", "parts": [msg.content]})
+                elif msg.role == MessageRole.ASSISTANT:
+                    history.append({"role": "model", "parts": [msg.content]})
+            
+            # Start chat with history
+            chat = model.start_chat(history=history)
             
             # Send last message and get response
-            last_message = messages[-1]
+            last_message = chat_messages[-1]
             response = chat.send_message(
                 last_message.content,
                 generation_config=genai.types.GenerationConfig(
@@ -87,16 +104,37 @@ class GoogleGeminiLLM(LLMRepository):
             Chunks of the generated response.
         """
         try:
-            # Convert domain messages to Gemini chat format
-            chat = self._model.start_chat(history=[])
+            # Extract system prompt if present
+            system_instruction = None
+            chat_messages = []
             
-            # Process all messages except the last one
-            for message in messages[:-1]:
-                if message.role == MessageRole.USER:
-                    chat.send_message(message.content)
+            for message in messages:
+                if message.role == MessageRole.SYSTEM:
+                    system_instruction = message.content
+                else:
+                    chat_messages.append(message)
+            
+            # Create model with system instruction if available
+            model = self._model
+            if system_instruction:
+                model = genai.GenerativeModel(
+                    self._model_name,
+                    system_instruction=system_instruction
+                )
+            
+            # Convert chat history to Gemini format
+            history = []
+            for i, msg in enumerate(chat_messages[:-1]):
+                if msg.role == MessageRole.USER:
+                    history.append({"role": "user", "parts": [msg.content]})
+                elif msg.role == MessageRole.ASSISTANT:
+                    history.append({"role": "model", "parts": [msg.content]})
+            
+            # Start chat with history
+            chat = model.start_chat(history=history)
             
             # Send last message and stream response
-            last_message = messages[-1]
+            last_message = chat_messages[-1]
             response = chat.send_message(
                 last_message.content,
                 generation_config=genai.types.GenerationConfig(
