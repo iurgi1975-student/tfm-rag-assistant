@@ -50,17 +50,27 @@ def load_auth_users():
         auth_dict = {"admin": "admin123"}
     
     return auth_dict
-
+# port_env = int(os.environ.get("PORT", 8080))
+port = int(os.environ.get("PORT", 8080))
 
 def main():
     """Main application entry point."""
+# DEBUG: Logs al inicio
+    print("="*60, file=sys.stderr, flush=True)
+    print("🚀 STARTING RAG AI ASSISTANT", file=sys.stderr, flush=True)
+    print(f"Python: {sys.version}", file=sys.stderr, flush=True)
+    print(f"PORT env: {os.environ.get('PORT', 'NOT SET')}", file=sys.stderr, flush=True)
+    print(f"Working dir: {os.getcwd()}", file=sys.stderr, flush=True)
+    print("="*60, file=sys.stderr, flush=True)
+    sys.stderr.flush()
+
     parser = argparse.ArgumentParser(description="RAG AI Assistant Integration")
-    parser.add_argument("--host", default="localhost", help="Host to run the interface on")
-    parser.add_argument("--port", default=int(os.getenv("PORT", 7860)), type=int, help="Port to run the interface on")
-    parser.add_argument("--model", default="llama3.2:3b", help="Model to use (Ollama or Google Gemini)")
+    parser.add_argument("--host", default="0.0.0.0", help="Host to run the interface on")
+    parser.add_argument("--port", default=port, type=int, help="Port to run the interface on")
+    parser.add_argument("--model", default="gemini-2.5-flash", help="Model to use (Ollama or Google Gemini)")
     parser.add_argument("--temperature", default=0.7, type=float, help="Temperature for the model")
-    parser.add_argument("--use-google", action="store_true", help="Use Google Gemini instead of Ollama")
-    parser.add_argument("--share", action="store_true", help="Create a public Gradio link")
+    parser.add_argument("--use-google", default=True, action="store_true", help="Use Google Gemini instead of Ollama")
+    parser.add_argument("--share", default=False, help="Create a public Gradio link")
     parser.add_argument("--debug", action="store_true", help="Enable debug mode")
     parser.add_argument("--no-auth", action="store_true", help="Disable authentication (for local development)")
     
@@ -75,7 +85,8 @@ def main():
     print("🚀 Starting RAG AI Assistant...")
     print(f"📍 Host: {args.host}:{args.port}")
     print(f"🤖 Model: {args.model}")
-    print(f"🔷 Provider: {'Google Gemini' if args.use_google else 'Ollama'}")
+    # print(f"🔷 Provider: {'Google Gemini' if args.use_google else 'Ollama'}")
+    print(f"🔷 Provider: {'Google Gemini' }")
     print(f"🌡️  Temperature: {args.temperature}")
     print(f"🔒 Authentication: {'Disabled' if args.no_auth else 'Enabled'}")
    
@@ -137,9 +148,9 @@ def main():
         
         # Launch the Gradio interface
         chat_interface.launch(
-            server_name=args.host,
-            server_port=args.port,
-            share=args.share,
+            server_name="0.0.0.0",
+            server_port=port,
+            share=False,
             debug=args.debug
         )
         

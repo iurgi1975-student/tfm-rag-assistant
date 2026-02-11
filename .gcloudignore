@@ -1,0 +1,85 @@
+# This file specifies files that are *not* uploaded to Google Cloud
+# using gcloud. It follows the same syntax as .gitignore.
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+*.whl
+
+# Virtual environments
+venv/
+venv_linux/
+env/
+ENV/
+.venv
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentation (ya está en la imagen)
+*.md
+!README.md
+
+# Tests
+tests/
+__tests__/
+*.test.py
+*.spec.py
+test_*.py
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+
+# Logs y datos locales
+logs/
+*.log
+chroma_db/
+data/
+
+# Environment files (las variables se pasan en el deploy)
+.env
+.env.local
+.env.*.local
+.env.example
+
+# Deployment scripts (no necesarios en la imagen)
+deploy_*.sh
+docker-compose.yml
+start.sh
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.circleci/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+.tmp/
+*.bak
+
+# OS specific
+Thumbs.db
+desktop.ini
+
+# Other
+node_modules/

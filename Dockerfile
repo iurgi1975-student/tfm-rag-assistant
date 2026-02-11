@@ -1,54 +1,27 @@
-# Use Python 3.13 slim image as base (better compatibility than Alpine)
 FROM python:3.13-slim
 
-# Set working directory
 WORKDIR /app
 
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1 \
+# Evitamos archivos temporales que hinchen la imagen
+ENV PIP_NO_CACHE_DIR=1 \
     PYTHONUNBUFFERED=1 \
-    PYTHONPATH=/app \
-    PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+    PORT=8080
 
-# Install system dependencies
+# Solo lo estrictamente necesario para compilar
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
-    wget \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first to leverage Docker cache
-COPY requirements.txt .
-
-# Upgrade pip to ensure we can use prebuilt wheels when available
+# Primero instalamos pip y torch (la parte más pesada)
 RUN pip install --upgrade pip
+RUN pip install torch --index-url https://download.pytorch.org/whl/cpu
 
-# Install PyTorch CPU-only version (much smaller, no CUDA)
-RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
+# Luego el resto de dependencias
+COPY requirements.txt .
+RUN pip install -r requirements.txt
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy the application code
+# Finalmente el código
 COPY . .
 
-# Create necessary directories for data persistence
-RUN mkdir -p /app/chroma_db /app/data /app/logs
-
-# Create a non-root user for security
-RUN useradd -m -u 1000 appuser && \
-    chown -R appuser:appuser /app
-USER appuser
-
-# Volumes for data persistence
-VOLUME ["/app/chroma_db", "/app/data"]
-
-# Expose the port (Railway will provide the PORT env var)
-EXPOSE 7860
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT:-7860}/ || exit 1
-
-# Default command to run the application (uses Ollama by default)
-CMD ["python", "app.py", "--host", "0.0.0.0"]
+# Comando de ejecución limpio
+CMD ["python", "app.py", "--host", "0.0.0.0", "--port", "8080", "--use-google", "--model", "gemini-2.5-flash"]

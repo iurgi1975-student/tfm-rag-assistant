@@ -3,6 +3,7 @@ Dependency Injection Container - DDD Infrastructure
 """
 import os
 from pathlib import Path
+import sys
 from typing import Optional
 
 from ..infrastructure.vector_stores.chroma_store import ChromaVectorStore
@@ -19,7 +20,7 @@ class AppContainer:
     
     def __init__(
         self,
-        model_name: str = "llama3.2:3b",
+        model_name: str = "gemini-2.0-flash",
         temperature: float = 0.7,
         chroma_dir: str = "./chroma_db",
         ollama_url: str = "http://localhost:11434",
@@ -80,9 +81,13 @@ class AppContainer:
     def vector_store(self) -> ChromaVectorStore:
         """Get or create vector store instance."""
         if self._vector_store is None:
-            print("💾 Initializing Vector Store...")
+             print("💾 Initializing Vector Store...", file=sys.stderr, flush=True)
+        try:
             self._vector_store = ChromaVectorStore(persist_dir=self.chroma_dir)
-            print("✅ Vector Store initialized!")
+            print("✅ Vector Store initialized!", file=sys.stderr, flush=True)
+        except Exception as e:
+            print(f"❌ Vector Store failed: {e}", file=sys.stderr, flush=True)
+            raise
         return self._vector_store
     
     @property

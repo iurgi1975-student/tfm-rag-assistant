@@ -16,7 +16,7 @@ class GoogleGeminiLLM(LLMRepository):
     def __init__(
         self,
         api_key: str,
-        model: str = "gemini-2.0-flash-lite",
+        model: str = "gemini-2.5-flash",
         temperature: float = 0.7,
         max_tokens: int = 4000
     ):
