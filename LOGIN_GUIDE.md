@@ -64,34 +64,6 @@ La aplicación se ejecutará sin requerir login (útil para desarrollo local).
 python app.py --use-google --host 0.0.0.0
 ```
 
-## Deployment Web
-
-### Para Azure Container Instances
-
-```bash
-# Configura la variable de entorno en Azure
-az container create \
-  --resource-group myResourceGroup \
-  --name rag-assistant \
-  --image myregistry.azurecr.io/rag-assistant:latest \
-  --environment-variables \
-    GRADIO_AUTH_USERS="admin:SecurePass2024" \
-    GOOGLE_API_KEY="your_api_key"
-```
-
-### Para Docker
-
-```bash
-# Ejecutar con variables de entorno
-docker run -p 7860:7860 \
-  -e GRADIO_AUTH_USERS="admin:MyPassword" \
-  -e GOOGLE_API_KEY="your_key" \
-  rag-assistant
-```
-
-### Para Railway
-
-Railway detectará automáticamente las variables de entorno desde tu proyecto. Añade `GRADIO_AUTH_USERS` en la sección de Environment Variables del dashboard.
 
 ## Seguridad
 

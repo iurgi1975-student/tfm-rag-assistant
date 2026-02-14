@@ -5,7 +5,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: rag-assistant
+    image: rag_localimage  # Nombre de la imagen
+    container_name: rag_localcontainer  # Nombre del contenedor
     ports:
       - "7860:7860"
     environment:

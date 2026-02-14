@@ -65,7 +65,7 @@ def main():
     sys.stderr.flush()
 
     parser = argparse.ArgumentParser(description="RAG AI Assistant Integration")
-    parser.add_argument("--host", default="0.0.0.0", help="Host to run the interface on")
+    parser.add_argument("--host", default="localhost", help="Host to run the interface on")
     parser.add_argument("--port", default=port, type=int, help="Port to run the interface on")
     parser.add_argument("--model", default="gemini-2.5-flash", help="Model to use (Ollama or Google Gemini)")
     parser.add_argument("--temperature", default=0.7, type=float, help="Temperature for the model")

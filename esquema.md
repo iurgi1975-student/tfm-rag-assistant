@@ -1,4 +1,4 @@
-´´´mermaid
+```mermaid
 graph TD
     A["🚀 python app.py<br/><br/>Inicio del programa"] --> B["<b>app.py:51</b><br/>def main()"]
     
@@ -52,4 +52,4 @@ graph TD
     
     class E1,F1,K1,L1,L3,M1,N1 module
     class E2,K3,L4 file
-  ´´´
+```

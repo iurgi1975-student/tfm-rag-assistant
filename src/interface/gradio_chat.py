@@ -254,9 +254,9 @@ class ChatInterface:
                 with gr.Column():
                     gr.Markdown("### Upload Documents")
                     file_upload = gr.File(
-                        label="Upload Files (PDF, TXT, DOCX)",
+                        label="Upload Files (PDF)",
                         file_count="multiple",
-                        file_types=[".pdf", ".txt", ".docx"],
+                        file_types=[".pdf"],
                         elem_classes=["upload-area"]
                     )
                     upload_btn = gr.Button("Process Files", variant="primary")
