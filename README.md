@@ -1,5 +1,5 @@
 # 🤖 RAG AI Assistant
-(La presentación esta creada en la nube de Presentaciones de Google, y compartida con Brice: https://docs.google.com/presentation/d/1TPeGEcbhpuQ1nhj-gsxKkaZkru7Gx5PqEG_x_NhyXvE/edit?usp=sharing )
+(La presentación esta creada en la nube de Presentaciones de Google, y compartida con Brais: https://docs.google.com/presentation/d/1TPeGEcbhpuQ1nhj-gsxKkaZkru7Gx5PqEG_x_NhyXvE/edit?usp=sharing )
 
 Sistema de Asistente de IA con Recuperación Aumentada por Generación (RAG) construido sobre arquitectura Domain-Driven Design (DDD). Permite interactuar con un modelo de lenguaje de gran escala (LLM) que accede dinámicamente a una base de conocimientos de documentos personalizados y persistentes.
 

@@ -100,6 +100,8 @@ GOOGLE_API_KEY=AIzaSyXXXXXXXXXXXXXXXXXXXXXXXXXX
 GRADIO_AUTH_USERS=profesor:ProfePass2024,alumno1:Estudiante1,alumno2:Estudiante2
 PORT=7860
 ```
+### NOTA
+GRADIO_AUTH_USERS="Las verdaderas claves para el acceso a la aplicación están publicadas en la presentación compartida con mouredev@gmail.com"
 
 ### 2. Ejecutar la aplicación
 
@@ -163,7 +165,4 @@ python app.py --share
 python app.py --no-auth --host localhost
 ```
 
-## Soporte
 
-Para más información sobre Gradio authentication, visita:
-- [Documentación oficial de Gradio](https://www.gradio.app/docs/interface#authentication)
