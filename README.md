@@ -1,6 +1,7 @@
 # 🤖 RAG AI Assistant
+(La presentación esta creada en la nube de Presentaciones de Google, y compartida con Brice: https://docs.google.com/presentation/d/1TPeGEcbhpuQ1nhj-gsxKkaZkru7Gx5PqEG_x_NhyXvE/edit?usp=sharing )
 
-Sistema de Asistente de IA con Recuperación Aumentada por Generación (RAG) construido sobre arquitectura Domain-Driven Design (DDD). Permite interactuar con un modelo de lenguaje de gran escala (LLM) que accede dinámicamente a una base de conocimientos de documentos personalizados.
+Sistema de Asistente de IA con Recuperación Aumentada por Generación (RAG) construido sobre arquitectura Domain-Driven Design (DDD). Permite interactuar con un modelo de lenguaje de gran escala (LLM) que accede dinámicamente a una base de conocimientos de documentos personalizados y persistentes.
 
 ## 📋 Descripción General del Proyecto
 
@@ -63,7 +64,7 @@ Este proyecto implementa un asistente conversacional inteligente que combina:
 - **Docker Compose**: Orquestación de contenedores
 - **Google Cloud Run**: Plataforma de despliegue serverless
 
-### Servicios Opcionales para Desarrollo Local
+### Servicios para Desarrollo Local
 - **Ollama**: Servidor de LLM local para ejecutar modelos open-source (llama2, mistral, codellama, etc.)
 - **n8n**: Plataforma de automatización de flujos de trabajo con interfaz visual para integrar servicios
 
@@ -447,7 +448,7 @@ El flujo RAG funciona así:
 
 **Configuración:**
 ```env
-GRADIO_AUTH_USERS=user1:pass1,user2:pass2,admin:admin123
+GRADIO_AUTH_USERS="Las verdaderas claves para el acceso a la aplicación están publicadas en la presentación compartida con mouredev@gmail.com"
 ```
 
 ### 6. 📊 Gestión de Base de Conocimientos
