@@ -17,9 +17,6 @@ Instala el CLI de Google Cloud:
 # Descarga e instala desde:
 # https://cloud.google.com/sdk/docs/install#windows
 
-# O usando Chocolatey:
-choco install gcloudsdk
-```
 
 **Linux/macOS:**
 ```bash
@@ -43,36 +40,6 @@ GOOGLE_API_KEY=tu_google_api_key_aqui
 GRADIO_AUTH_USERS=admin:admin123,user:pass456
 ```
 
-## 🚀 Despliegue Rápido (Usando el Script)
-
-### Opción 1: Script Automático
-
-```bash
-# Da permisos de ejecución al script
-chmod +x deploy_to_cloudrun.sh
-
-# Ejecuta el script
-./deploy_to_cloudrun.sh
-```
-
-El script te pedirá:
-1. **Project ID**: El ID de tu proyecto en Google Cloud
-2. **Google API Key**: Tu clave de API de Google
-3. **Usuarios de autenticación**: Credenciales de acceso (formato: user1:pass1,user2:pass2)
-
-### Opción 2: Variables de Entorno
-
-Puedes configurar variables de entorno antes de ejecutar el script:
-
-```bash
-export GCP_PROJECT_ID="mi-proyecto-gcp"
-export GCP_REGION="us-central1"  # o tu región preferida
-export SERVICE_NAME="rag-assistant"
-export MEMORY="2Gi"
-export CPU="2"
-
-./deploy_to_cloudrun.sh
-```
 
 ## 📝 Despliegue Manual Paso a Paso
 
@@ -147,34 +114,6 @@ gcloud run services describe $SERVICE_NAME \
     --format='value(status.url)'
 ```
 
-## ⚙️ Configuración Avanzada
-
-### Recursos y Escalado
-
-**Para aplicaciones con más carga:**
-```bash
---memory=4Gi \
---cpu=4 \
---min-instances=1 \
---max-instances=20 \
---concurrency=80
-```
-
-**Para desarrollo/pruebas:**
-```bash
---memory=1Gi \
---cpu=1 \
---min-instances=0 \
---max-instances=5 \
---concurrency=10
-```
-
-### Variables de Entorno Adicionales
-
-```bash
---set-env-vars="ENVIRONMENT=production" \
---set-env-vars="LOG_LEVEL=INFO" \
---set-env-vars="OLLAMA_URL=https://tu-ollama-server.com"
 ```
 
 ### Configurar Secretos (Recomendado para Producción)
@@ -296,14 +235,6 @@ gcloud run services update-traffic $SERVICE_NAME \
     --region=$REGION
 ```
 
-### Despliegue Gradual (Canary)
-
-```bash
-# 50% tráfico a la nueva versión
-gcloud run services update-traffic $SERVICE_NAME \
-    --to-revisions=NEW_REVISION=50,OLD_REVISION=50 \
-    --region=$REGION
-```
 
 ## 💰 Costos y Optimización
 
@@ -330,121 +261,5 @@ Ejemplo estimado:
 - 2GB memoria, 2 vCPU
 - **~$15-25 USD/mes** (puede variar según región y uso)
 
-## 🛠️ Comandos Útiles
 
-### Información del Servicio
 
-```bash
-# Detalles completos
-gcloud run services describe $SERVICE_NAME --region=$REGION
-
-# Solo la URL
-gcloud run services describe $SERVICE_NAME \
-    --region=$REGION \
-    --format='value(status.url)'
-
-# Listar todos los servicios
-gcloud run services list
-```
-
-### Actualizar Variables de Entorno
-
-```bash
-gcloud run services update $SERVICE_NAME \
-    --update-env-vars="NEW_VAR=value" \
-    --region=$REGION
-```
-
-### Eliminar el Servicio
-
-```bash
-gcloud run services delete $SERVICE_NAME \
-    --region=$REGION \
-    --quiet
-```
-
-### Configuración de Dominios Personalizados
-
-```bash
-# Mapear un dominio
-gcloud run domain-mappings create \
-    --service=$SERVICE_NAME \
-    --domain=tudominio.com \
-    --region=$REGION
-```
-
-## 🐛 Troubleshooting
-
-### El Servicio No Inicia
-
-```bash
-# Ver logs de inicio
-gcloud run services logs read $SERVICE_NAME \
-    --region=$REGION \
-    --limit=100
-
-# Verificar la configuración
-gcloud run services describe $SERVICE_NAME --region=$REGION
-```
-
-### Errores Comunes
-
-1. **Error 503**: El contenedor no responde en el puerto correcto
-   - Verifica que `PORT=7860` esté configurado
-   - Asegúrate que el Dockerfile expone el puerto correcto
-
-2. **Error 504 (Timeout)**: La aplicación tarda demasiado en iniciar
-   - Aumenta `--timeout`
-   - Optimiza el tiempo de inicio del contenedor
-
-3. **Out of Memory**: Aumenta la memoria asignada
-   ```bash
-   gcloud run services update $SERVICE_NAME --memory=4Gi
-   ```
-
-4. **API Key Issues**:
-   - Verifica que `GOOGLE_API_KEY` esté configurada
-   - Revisa los logs para errores de autenticación
-
-### Ejecutar Localmente para Debugging
-
-```bash
-# Construir la imagen localmente
-docker build -t rag-assistant .
-
-# Ejecutar con las mismas variables de entorno
-docker run -p 7860:7860 \
-    -e GOOGLE_API_KEY="tu_api_key" \
-    -e GRADIO_AUTH_USERS="admin:admin123" \
-    -e PORT=7860 \
-    rag-assistant
-```
-
-## 📚 Recursos Adicionales
-
-- [Documentación de Cloud Run](https://cloud.google.com/run/docs)
-- [Mejores prácticas de Cloud Run](https://cloud.google.com/run/docs/best-practices)
-- [Solución de problemas](https://cloud.google.com/run/docs/troubleshooting)
-- [Límites y cuotas](https://cloud.google.com/run/quotas)
-- [Cloud Run FAQ](https://cloud.google.com/run/docs/faq)
-
-## 🎯 Checklist de Despliegue
-
-- [ ] Cuenta de Google Cloud creada
-- [ ] Facturación habilitada
-- [ ] gcloud CLI instalado y autenticado
-- [ ] Proyecto de GCP creado
-- [ ] Variables de entorno configuradas (.env)
-- [ ] Script de despliegue ejecutado
-- [ ] Servicio desplegado exitosamente
-- [ ] URL del servicio obtenida
-- [ ] Autenticación probada
-- [ ] Aplicación funcionando correctamente
-- [ ] Monitoreo configurado
-- [ ] Costos revisados
-
----
-
-¡Tu RAG Assistant ahora está corriendo en Google Cloud Run! 🎉
-
-Para soporte adicional, consulta la documentación oficial o abre un issue en el repositorio del proyecto.

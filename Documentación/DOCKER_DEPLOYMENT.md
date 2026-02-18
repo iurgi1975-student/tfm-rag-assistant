@@ -146,15 +146,6 @@ docker volume inspect rag-chroma-db
 docker run --rm -v rag-chroma-db:/data -v $(pwd):/backup alpine tar czf /backup/chroma-backup.tar.gz /data
 ```
 
-### 🚀 Deployment en Producción
-
-Para producción, considera:
-1. Usar un proxy inverso (nginx) con HTTPS
-2. Configurar límites de recursos en docker-compose.yml
-3. Implementar mejor gestión de secretos (Docker secrets, HashiCorp Vault)
-4. Configurar logs centralizados
-5. Monitoreo y alertas (Prometheus, Grafana)
-6. Backups automáticos de los volúmenes
 
 ### 🌐 Acceso desde Red Local
 
@@ -166,26 +157,3 @@ environment:
 
 Luego accede desde: `http://TU_IP_LOCAL:7860`
 
-### 📋 Checklist de Deployment
-
-- [ ] `.env` configurado con API keys y usuarios
-- [ ] Ollama corriendo en el host (puerto 11434)
-- [ ] Puerto 7860 disponible
-- [ ] Docker y Docker Compose actualizados
-- [ ] `docker-compose build` ejecutado exitosamente
-- [ ] `docker-compose up -d` ejecutado
-- [ ] Verificar logs: `docker-compose logs -f`
-- [ ] Acceder a http://localhost:7860 y probar login
-- [ ] Subir documentos de prueba
-- [ ] Verificar que ChromaDB persiste datos (reiniciar y verificar)
-
----
-
-## 🎉 ¡Listo!
-
-Tu RAG Assistant está corriendo en Docker con:
-- ✅ Autenticación con login/logout
-- ✅ Persistencia de datos en volúmenes
-- ✅ Conexión con Ollama local
-- ✅ Health checks configurados
-- ✅ Usuario no-root por seguridad

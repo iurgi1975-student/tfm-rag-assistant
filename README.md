@@ -15,7 +15,7 @@ Este proyecto implementa un asistente conversacional inteligente que combina:
 
 ### Características Principales
 
-✅ Chat conversacional con IA (Google Gemini)  
+✅ Chat conversacional con IA   
 ✅ Carga y procesamiento de documentos PDF  
 ✅ Búsqueda semántica en base de conocimientos  
 ✅ Persistencia de conversaciones  
@@ -39,13 +39,13 @@ Este proyecto implementa un asistente conversacional inteligente que combina:
   - `langchain-huggingface`: Integración con Hugging Face
   - `langchain-ollama`: Soporte para modelos Ollama (opcional)
   - `langchain-openai`: Integración con OpenAI API
-- **Google Generative AI**: API de Google Gemini (modelo principal)
+- **Google Generative AI**: API de Google Gemini 
 - **Sentence Transformers**: Generación de embeddings semánticos
 - **OpenAI**: Modelos de lenguaje (soporte alternativo)
 
 ### Base de Datos y Persistencia
 - **ChromaDB**: Base de datos vectorial para almacenamiento de embeddings
-- **SQLite**: Backend de persistencia de ChromaDB
+- **SQLite**: Backend de persistencia conversaciones
 
 ### Procesamiento de Documentos
 - **PyPDF**: Extracción y procesamiento de archivos PDF
@@ -66,7 +66,7 @@ Este proyecto implementa un asistente conversacional inteligente que combina:
 
 ### Servicios para Desarrollo Local
 - **Ollama**: Servidor de LLM local para ejecutar modelos open-source (llama2, mistral, codellama, etc.)
-- **n8n**: Plataforma de automatización de flujos de trabajo con interfaz visual para integrar servicios
+- **n8n**: Plataforma de automatización de flujos de trabajo con interfaz visual para integrar servicios. Se añade enel contenedor pero no es necesario para esta aplicación.
 
 ---
 
@@ -194,8 +194,8 @@ Acceder en: `http://localhost:7860`
 
 Este setup incluye:
 - **Ollama**: Modelo LLM local (alternativa a Google Gemini)
-- **n8n**: Plataforma de automatización de flujos de trabajo
-- **RAG App**: La aplicación principal (opcional)
+- **n8n**: Plataforma de automatización de flujos de trabajo (Opcional)
+- **RAG App**: La aplicación principal
 
 ```bash
 # Levantar todos los servicios
@@ -236,11 +236,6 @@ python app.py --model llama2 --no-use-google
 # Con variable de entorno
 OLLAMA_URL=http://localhost:11434 python app.py --model llama2
 ```
-
-**Configurar n8n con Ollama:**
-1. Accede a n8n en `http://localhost:5678`
-2. Crea flujos de trabajo que integren Ollama para procesamiento de lenguaje natural
-3. Puedes conectar n8n con la aplicación RAG mediante webhooks o APIs
 
 ---
 
@@ -344,7 +339,7 @@ tfm-rag-assistant/
 │   └── GUIA_RAPIDA.md             # Guía rápida de testing
 │
 ├── chroma_db/                      # Base de datos vectorial (persistencia)
-├── data/                           # Datos de entrada (documentos)
+├── data/                           # Datos de entrada (conversaciones)
 ├── docs/                           # Documentos procesados
 ├── logs/                           # Logs de la aplicación
 │
@@ -472,101 +467,7 @@ GRADIO_AUTH_USERS="Las verdaderas claves para el acceso a la aplicación están 
 - **Feedback en tiempo real**: Mensajes de estado y error claros
 - **Limpieza de historial**: Botón para resetear conversación
 
-#### Logging y Debugging
-- Sistema de logs centralizado
-- Modo debug para desarrollo
-- Mensajes de error descriptivos
-
 ---
-
----
-
-## 🛠️ Desarrollo Local con Ollama y n8n
-
-### ¿Por qué usar Ollama y n8n?
-
-**Ollama** te permite ejecutar modelos LLM localmente sin depender de APIs externas:
-- ✅ Sin costos de API
-- ✅ Mayor privacidad (datos no salen de tu máquina)
-- ✅ Sin límites de requests
-- ✅ Funciona sin conexión a internet
-
-**n8n** es una plataforma de automatización que te permite:
-- ✅ Crear flujos de trabajo automatizados
-- ✅ Integrar múltiples servicios (Ollama, RAG, bases de datos, APIs)
-- ✅ Procesar documentos por lotes
-- ✅ Crear pipelines de datos complejos
-
-### Setup Completo
-
-1. **Levantar los servicios:**
-```bash
-docker-compose -f docker-compose-ollama-n8n.yml up -d
-```
-
-2. **Descargar modelos en Ollama:**
-```bash
-# Modelos recomendados
-docker exec -it ollama ollama pull llama2        # Modelo general (3.8GB)
-docker exec -it ollama ollama pull mistral       # Rápido y eficiente (4.1GB)
-docker exec -it ollama ollama pull codellama     # Especializado en código (3.8GB)
-docker exec -it ollama ollama pull gemma:2b      # Muy ligero (1.4GB)
-
-# Ver modelos instalados
-docker exec -it ollama ollama list
-```
-
-3. **Probar Ollama:**
-```bash
-# Desde terminal
-docker exec -it ollama ollama run llama2
-
-# Desde Python
-curl http://localhost:11434/api/generate -d '{
-  "model": "llama2",
-  "prompt": "¿Qué es la arquitectura DDD?"
-}'
-```
-
-4. **Ejecutar la app con Ollama:**
-```bash
-# Ejecutar sin usar Google Gemini
-python app.py --model llama2 --temperature 0.7
-
-# La app detectará automáticamente Ollama en localhost:11434
-```
-
-5. **Configurar n8n:**
-- Accede a `http://localhost:5678`
-- Crea tu cuenta (primera vez)
-- Explora los workflows de ejemplo
-
-### Casos de Uso con n8n
-
-**1. Procesamiento de documentos por lotes:**
-```
-Trigger (cada hora) → Leer carpeta → Procesar PDFs → Enviar a RAG → Notificar
-```
-
-**2. Pipeline de chat automatizado:**
-```
-Webhook → Consultar RAG → Ollama → Formatear respuesta → Enviar email/Slack
-```
-
-**3. Monitoreo de base de conocimientos:**
-```
-Cron → Verificar ChromaDB → Generar estadísticas → Dashboard
-```
-
-### Integración n8n + Ollama + RAG
-
-Ejemplo de workflow en n8n:
-
-1. **HTTP Request Node**: Recibe consulta del usuario
-2. **Code Node**: Prepara la consulta y contexto
-3. **HTTP Request to RAG**: Busca documentos relevantes en tu app
-4. **HTTP Request to Ollama**: Genera respuesta con contexto
-5. **Respond Node**: Devuelve respuesta formateada
 
 ### Ventajas del Stack Local
 
@@ -574,7 +475,7 @@ Ejemplo de workflow en n8n:
 |---------|--------------|--------------|
 | Costo | Por request | Gratuito |
 | Privacidad | Datos en la nube | 100% local |
-| Velocidad | Depende de internet | Muy rápido |
+| Velocidad | Depende de internet | Depende de la GPU |
 | Límites | Sí (RPM/RPD) | Sin límites |
 | Modelos | Gemini family | 100+ modelos open-source |
 | Setup | API Key | Docker + Modelo |
@@ -667,42 +568,10 @@ Las contribuciones son bienvenidas. Por favor:
 
 ## 📄 Licencia
 
-Este proyecto es parte del curso de Infraestructura y Cloud de BigSchool.
+Este proyecto es parte del Master desarrollo con IA de BigSchool.
 
 ---
 
-## 👥 Autores
-
-Desarrollado como proyecto del Módulo 5 - Infraestructura y Cloud
 
 ---
 
-## 🆘 Solución de Problemas
-
-### Error: "GOOGLE_API_KEY not found"
-**Solución**: Asegúrate de tener el archivo `.env` con tu API key de Google
-
-### Error al cargar documentos PDF
-**Solución**: Verifica que el PDF no esté corrupto y que `pypdf` esté instalado correctamente
-
-### ChromaDB no persiste datos
-**Solución**: Verifica permisos de escritura en el directorio `chroma_db/`
-
-### Puerto ya en uso
-**Solución**: Cambia el puerto con `--port 7861` o detén el proceso que usa el puerto
-
-### Problemas con Docker en Cloud Run
-**Solución**: Consulta [CLOUDRUN_FIX.md](CLOUDRUN_FIX.md) para soluciones específicas
-
----
-
-## 📞 Soporte
-
-Para preguntas o problemas:
-- Revisa la [documentación](Documentación/)
-- Consulta los archivos de guía específicos (LOGIN_GUIDE.md, CLOUDRUN_DEPLOYMENT.md, etc.)
-- Abre un issue en el repositorio
-
----
-
-**¡Gracias por usar RAG AI Assistant! 🚀**

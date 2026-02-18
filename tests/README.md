@@ -243,20 +243,5 @@ Cada test es independiente:
 - **Unit Tests** (los que tenemos): Usan mocks, son rápidos, prueban lógica
 - **Integration Tests** (futuro): Usan componentes reales, son lentos, prueban integración
 
-## 📚 Recursos para Aprender Más
-
-- [Pytest Documentation](https://docs.pytest.org/)
-- [Python Mocking (unittest.mock)](https://docs.python.org/3/library/unittest.mock.html)
-- [Test-Driven Development (TDD)](https://en.wikipedia.org/wiki/Test-driven_development)
-
-## 🎓 Próximos Pasos
-
-1. **Ejecuta los tests** y observa los resultados
-2. **Modifica un test** para que falle intencionalmente y ve qué pasa
-3. **Crea tu propio test** para una nueva funcionalidad
-4. **Aprende sobre Integration Tests** para probar con Ollama y ChromaDB reales
-5. **Configura CI/CD** en GitHub Actions para ejecutar tests automáticamente
-
----
 
 ¡Los tests son tu red de seguridad! 🛡️ Úsalos con frecuencia para desarrollar con confianza.
