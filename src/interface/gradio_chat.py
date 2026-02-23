@@ -68,8 +68,14 @@ class ChatInterface:
     
     def get_knowledge_base_status(self) -> str:
         """Get the current status of the knowledge base."""
-        stats = self.document_service.get_document_stats()
-        return f"Documents in knowledge base: {stats['total_documents']}"
+        document_names = self.document_service.list_document_names()
+        
+        if not document_names:
+            return "No documents in knowledge base"
+        
+        # Format as a list with bullets
+        doc_list = "\n".join([f"• {name}" for name in document_names])
+        return f"Processed documents:\n{doc_list}"
     
     def chat_response(self, message: str, history: List[dict]) -> Tuple[List[dict], str]:
         """Generate chat response."""
@@ -244,7 +250,9 @@ class ChatInterface:
                     status_display = gr.Textbox(
                         label="Knowledge Base Status",
                         value=self.get_knowledge_base_status(),
-                        interactive=False
+                        interactive=False,
+                        lines=10,
+                        max_lines=15
                     )
                     
                     refresh_status_btn = gr.Button("Refresh Status")

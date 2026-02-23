@@ -94,12 +94,10 @@ class DocumentService:
             "status": "ready" if count > 0 else "empty"
         }
     
-    def list_document_ids(self) -> List[str]:
-        """Get list of all document IDs in the knowledge base.
+    def list_document_names(self) -> List[str]:
+        """Get list of all unique document names in the knowledge base.
         
         Returns:
-            List of document IDs.
+            Sorted list of unique document filenames.
         """
-        # This would require extending the repository interface
-        # For now, return empty list as placeholder
-        return []
+        return self._repository.get_all_document_names()

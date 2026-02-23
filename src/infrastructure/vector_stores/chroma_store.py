@@ -150,6 +150,59 @@ class ChromaVectorStore(VectorStoreRepository):
             # If collection doesn't exist or is empty, return 0
             return 0
     
+    def get_all_document_names(self) -> List[str]:
+        """Get list of all unique document names in the store.
+        
+        Returns:
+            List of unique document filenames (PDFs) or sources.
+            Includes manual text inputs with a counter.
+        """
+        try:
+            if self.collection.count() == 0:
+                return []
+            
+            # Get all metadata from the collection
+            all_data = self.collection.get(include=["metadatas"])
+            
+            if not all_data or not all_data.get("metadatas"):
+                return []
+            
+            # Extract unique document names and count manual inputs
+            document_names = set()
+            manual_input_count = 0
+            
+            for metadata in all_data["metadatas"]:
+                # Try filename first (for PDFs), then source
+                doc_name = metadata.get("filename") or metadata.get("source")
+                
+                if not doc_name:
+                    continue
+                
+                # Count manual inputs separately
+                if doc_name in ["text_input", "manual_input"]:
+                    manual_input_count += 1
+                else:
+                    # Extract basename if it's a path
+                    if "/" in doc_name or "\\" in doc_name:
+                        doc_name = Path(doc_name).name
+                    document_names.add(doc_name)
+            
+            # Build result list
+            result = sorted(list(document_names))
+            
+            # Add manual inputs summary if any exist
+            if manual_input_count > 0:
+                # Count unique manual text chunks
+                manual_chunks = sum(1 for m in all_data["metadatas"] 
+                                   if m.get("source") in ["text_input", "manual_input"] 
+                                   or m.get("filename") in ["text_input", "manual_input"])
+                result.append(f"📝 Manual text inputs ({manual_chunks} chunks)")
+            
+            return result
+            
+        except Exception:
+            return []
+    
     def __len__(self) -> int:
         """Return the number of documents via len() operator."""
         return self.get_document_count()

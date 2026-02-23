@@ -60,6 +60,15 @@ class VectorStoreRepository(ABC):
         """
         pass
     
+    @abstractmethod
+    def get_all_document_names(self) -> List[str]:
+        """Get list of all unique document names in the store.
+        
+        Returns:
+            List of unique document filenames or source identifiers.
+        """
+        pass
+    
     def __len__(self) -> int:
         """Return the number of documents via len() operator.
         
