@@ -10,9 +10,11 @@ from ..infrastructure.vector_stores.chroma_store import ChromaVectorStore
 from ..infrastructure.document_processor import DocumentProcessor
 from ..infrastructure.llm import OllamaLLM, GoogleGeminiLLM
 from ..infrastructure.persistence import SQLiteChatRepository
+from ..infrastructure.authentication import InMemoryAuthRepository
 from .services.document_service import DocumentService
 from .services.rag_service import RAGService
 from .services.chat_service import ChatService
+from .services.authentication_service import AuthenticationService
 
 
 class AppContainer:
@@ -33,7 +35,9 @@ class AppContainer:
         memory_window: int = 10,
         enable_chat_persistence: bool = True,
         chat_db_path: str = "./data/chat_history.db",
-        default_session_id: str = "main"
+        default_session_id: str = "main",
+        auth_users_config: Optional[str] = None,
+        enable_authentication: bool = False
     ):
         """Initialize container with configuration.
         
@@ -52,6 +56,8 @@ class AppContainer:
             enable_chat_persistence: Enable SQLite chat history persistence.
             chat_db_path: Path to SQLite database for chat history.
             default_session_id: Default session identifier for chats.
+            auth_users_config: Authentication config (format: user:pass:role,user2:pass2:role2).
+            enable_authentication: Enable role-based authentication.
         """
         self.model_name = model_name
         self.temperature = temperature
@@ -67,15 +73,19 @@ class AppContainer:
         self.enable_chat_persistence = enable_chat_persistence
         self.chat_db_path = chat_db_path
         self.default_session_id = default_session_id
+        self.auth_users_config = auth_users_config
+        self.enable_authentication = enable_authentication
         
         # Singleton instances
         self._vector_store: Optional[ChromaVectorStore] = None
         self._llm: Optional[OllamaLLM] = None
         self._document_processor: Optional[DocumentProcessor] = None
         self._chat_repository: Optional[SQLiteChatRepository] = None
+        self._auth_repository: Optional[InMemoryAuthRepository] = None
         self._document_service: Optional[DocumentService] = None
         self._rag_service: Optional[RAGService] = None
         self._chat_service: Optional[ChatService] = None
+        self._authentication_service: Optional[AuthenticationService] = None
     
     @property
     def vector_store(self) -> ChromaVectorStore:
@@ -175,12 +185,36 @@ class AppContainer:
             print("✅ Chat Service initialized!")
         return self._chat_service
     
+    @property
+    def auth_repository(self) -> Optional[InMemoryAuthRepository]:
+        """Get or create authentication repository."""
+        if self.enable_authentication and self._auth_repository is None:
+            print("🔐 Initializing Authentication Repository...")
+            self._auth_repository = InMemoryAuthRepository.from_env_config(
+                self.auth_users_config or ""
+            )
+            print("✅ Authentication Repository initialized!")
+        return self._auth_repository
+    
+    @property
+    def authentication_service(self) -> Optional[AuthenticationService]:
+        """Get or create authentication service."""
+        if self.enable_authentication and self._authentication_service is None:
+            print("🔑 Initializing Authentication Service...")
+            self._authentication_service = AuthenticationService(
+                auth_repository=self.auth_repository
+            )
+            print("✅ Authentication Service initialized!")
+        return self._authentication_service
+    
     def reset(self):
         """Reset all singleton instances (useful for testing)."""
         self._vector_store = None
         self._llm = None
         self._document_processor = None
         self._chat_repository = None
+        self._auth_repository = None
         self._document_service = None
         self._rag_service = None
         self._chat_service = None
+        self._authentication_service = None

@@ -30,26 +30,28 @@ def load_environment():
             print("⚠️  No .env file found. Please create one with your API keys.")
 
 
-def load_auth_users():
-    """Load authentication users from environment variables."""
-    auth_dict = {}
+def load_auth_config():
+    """
+    Load authentication configuration from environment variables.
     
-    # Load from environment variable (format: "user1:pass1,user2:pass2")
-    auth_string = os.getenv("GRADIO_AUTH_USERS", "")
+    Returns:
+        Configuration string for role-based authentication
     
-    if auth_string:
-        for user_pass in auth_string.split(","):
-            if ":" in user_pass:
-                username, password = user_pass.strip().split(":", 1)
-                auth_dict[username] = password
+    Expected format: "username:password:role,username2:password2:role2"
+    Example: "admin:admin123:admin,user:user123:user"
+    """
+    # Load from environment variable (new format with roles)
+    auth_config = os.getenv("GRADIO_AUTH_USERS", "")
     
-    # If no users found in env, use default (for development only)
-    if not auth_dict:
-        print("⚠️  No GRADIO_AUTH_USERS found in environment. Using default credentials.")
-        print("⚠️  Default: admin / admin123 (NOT for production!)")
-        auth_dict = {"admin": "admin123"}
+    if not auth_config:
+        print("⚠️  No GRADIO_AUTH_USERS found in environment.")
+        print("⚠️  Default user will be created:")
+        print("      - admin / admin123 (Admin role - full access)")
+        print("⚠️  NOT for production! Set GRADIO_AUTH_USERS in .env")
+        # Return empty string to use defaults from InMemoryAuthRepository
+        return ""
     
-    return auth_dict
+    return auth_config
 # port_env = int(os.environ.get("PORT", 8080))
 port = int(os.environ.get("PORT", 8080))
 
@@ -79,8 +81,8 @@ def main():
     # Load environment variables
     load_environment()
     
-    # Load authentication users
-    auth_users = None if args.no_auth else load_auth_users()
+    # Load authentication configuration
+    auth_config = None if args.no_auth else load_auth_config()
     
     print("🚀 Starting RAG AI Assistant...")
     print(f"📍 Host: {args.host}:{args.port}")
@@ -88,7 +90,7 @@ def main():
     # print(f"🔷 Provider: {'Google Gemini' if args.use_google else 'Ollama'}")
     print(f"🔷 Provider: {'Google Gemini' }")
     print(f"🌡️  Temperature: {args.temperature}")
-    print(f"🔒 Authentication: {'Disabled' if args.no_auth else 'Enabled'}")
+    print(f"🔒 Authentication: {'Disabled' if args.no_auth else 'Enabled (with role-based access)'}")
    
    
     try:
@@ -113,7 +115,9 @@ def main():
             chunk_overlap=200,
             rag_top_k=4,
             rag_min_score=0.0,
-            memory_window=10
+            memory_window=10,
+            auth_users_config=auth_config,
+            enable_authentication=not args.no_auth
         )
         
         # Create the chat interface with injected services
@@ -122,8 +126,9 @@ def main():
             document_service=container.document_service,
             rag_service=container.rag_service,
             chat_service=container.chat_service,
+            authentication_service=container.authentication_service,
             title="🤖 RAG AI Assistant with DDD Architecture",
-            auth_users=auth_users
+            auth_users=None  # Deprecated, using authentication_service now
         )
         
         print("✅ Interface created successfully!")
@@ -134,13 +139,17 @@ def main():
         print("="*60)
         print(f"🌐 Access the interface at: http://{args.host}:{args.port}")
         
-        if auth_users:
-            print("\n🔐 Authentication enabled:")
-            print(f"   Users configured: {len(auth_users)}")
+        if not args.no_auth:
+            print("\n🔐 Role-based Authentication enabled:")
+            print("   👑 Admin role: Full access (chat + document management)")
+            print("   👤 User role: Limited access (chat only)")
             print("   Please login to access the application")
+            if not auth_config:
+                print("\n   Default credentials (development only):")
+                print("      admin / admin123 (Admin)")
         
         print("\n💡 Tips:")
-        print("- Upload documents in the 'Document Management' tab")
+        print("- Upload documents in the 'Document Management' tab (Admin only)")
         print("- Search documents to test RAG retrieval")
         print("- Start chatting with AI that uses your documents")
         print("- Use Ctrl+C to stop the application")
