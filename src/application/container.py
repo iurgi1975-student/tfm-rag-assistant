@@ -33,14 +33,16 @@ class AppContainer:
         memory_window: int = 10,
         enable_chat_persistence: bool = True,
         chat_db_path: str = "./data/chat_history.db",
-        default_session_id: str = "main"
+        default_session_id: str = "main",
+        use_multimodal: bool = False,
+        chroma_dir_multimodal: str = "./chroma_db_multimodal",
     ):
         """Initialize container with configuration.
         
         Args:
             model_name: Model name (Ollama or Google Gemini).
             temperature: LLM temperature.
-            chroma_dir: ChromaDB persistence directory.
+            chroma_dir: ChromaDB persistence directory (text-only mode).
             ollama_url: Ollama API base URL.
             google_api_key: Google AI Studio API key.
             use_google: Use Google Gemini instead of Ollama.
@@ -52,6 +54,8 @@ class AppContainer:
             enable_chat_persistence: Enable SQLite chat history persistence.
             chat_db_path: Path to SQLite database for chat history.
             default_session_id: Default session identifier for chats.
+            use_multimodal: Enable CLIP embeddings + image collection.
+            chroma_dir_multimodal: Separate ChromaDB dir for multimodal (CLIP).
         """
         self.model_name = model_name
         self.temperature = temperature
@@ -67,6 +71,8 @@ class AppContainer:
         self.enable_chat_persistence = enable_chat_persistence
         self.chat_db_path = chat_db_path
         self.default_session_id = default_session_id
+        self.use_multimodal = use_multimodal
+        self.chroma_dir_multimodal = chroma_dir_multimodal
         
         # Singleton instances
         self._vector_store: Optional[ChromaVectorStore] = None
@@ -79,11 +85,22 @@ class AppContainer:
     
     @property
     def vector_store(self) -> ChromaVectorStore:
-        """Get or create vector store instance."""
+        """Get or create vector store instance.
+        
+        - Text-only mode:   uses ./chroma_db          (all-MiniLM-L6-v2, 384 dims)
+        - Multimodal mode:  uses ./chroma_db_multimodal (clip-ViT-B-32, 512 dims)
+        """
         if self._vector_store is None:
-             print("💾 Initializing Vector Store...", file=sys.stderr, flush=True)
+            print("💾 Initializing Vector Store...", file=sys.stderr, flush=True)
         try:
-            self._vector_store = ChromaVectorStore(persist_dir=self.chroma_dir)
+            if self.use_multimodal:
+                self._vector_store = ChromaVectorStore(
+                    persist_dir=self.chroma_dir_multimodal,
+                    embedding_model="clip-ViT-B-32",
+                    use_multimodal=True,
+                )
+            else:
+                self._vector_store = ChromaVectorStore(persist_dir=self.chroma_dir)
             print("✅ Vector Store initialized!", file=sys.stderr, flush=True)
         except Exception as e:
             print(f"❌ Vector Store failed: {e}", file=sys.stderr, flush=True)

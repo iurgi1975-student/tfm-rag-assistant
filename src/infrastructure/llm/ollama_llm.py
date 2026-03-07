@@ -1,11 +1,16 @@
 """OllamaLLM - Ollama implementation of LLMRepository."""
 
 from typing import List, Generator
+import base64
+from pathlib import Path
 from langchain_ollama import ChatOllama
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
 from ...domain.repositories.llm_repository import LLMRepository
 from ...domain.models import ChatMessage, MessageRole
+
+# Ollama models known to support vision (image input)
+_VISION_MODELS = ("llava", "bakllava", "moondream", "llava-phi3", "minicpm-v")
 
 
 class OllamaLLM(LLMRepository):
@@ -75,6 +80,60 @@ class OllamaLLM(LLMRepository):
             Model name string.
         """
         return self._model_name
+
+    def supports_vision(self) -> bool:
+        """Return True if the loaded Ollama model supports image input."""
+        return any(self._model_name.startswith(m) for m in _VISION_MODELS)
+
+    def invoke_with_images(self, messages: List[ChatMessage], images: List[str]) -> str:
+        """Generate a response using text messages and images.
+
+        Sends images as base64-encoded content inside a HumanMessage,
+        which is the format langchain_ollama expects for vision models.
+
+        Args:
+            messages: List of ChatMessage from domain.
+            images: List of image file paths (max 4).
+
+        Returns:
+            Generated response text.
+        """
+        try:
+            prompt = next(
+                (m.content for m in reversed(messages) if m.role == MessageRole.USER),
+                ""
+            )
+
+            # Build multimodal content list: text + base64 images
+            content: list = [{"type": "text", "text": prompt}]
+            for path in images[:4]:
+                if Path(path).exists():
+                    with open(path, "rb") as f:
+                        b64 = base64.b64encode(f.read()).decode("utf-8")
+                    content.append({
+                        "type": "image_url",
+                        "image_url": {"url": f"data:image/png;base64,{b64}"},
+                    })
+
+            # Rebuild history (excluding the last user message)
+            langchain_messages = []
+            for msg in messages[:-1]:
+                if msg.role == MessageRole.SYSTEM:
+                    langchain_messages.append(SystemMessage(content=msg.content))
+                elif msg.role == MessageRole.USER:
+                    langchain_messages.append(HumanMessage(content=msg.content))
+                elif msg.role == MessageRole.ASSISTANT:
+                    langchain_messages.append(AIMessage(content=msg.content))
+
+            langchain_messages.append(HumanMessage(content=content))
+
+            response = self._llm.invoke(langchain_messages)
+            return str(response.content) if response.content else ""
+
+        except Exception as e:
+            error_msg = f"Error generating vision response from Ollama: {str(e)}"
+            print(f"❌ {error_msg}")
+            return error_msg
     
     def _convert_to_langchain(self, messages: List[ChatMessage]) -> List:
         """Convert domain ChatMessage to LangChain messages.

@@ -1,7 +1,9 @@
 """GoogleGeminiLLM - Google Gemini implementation of LLMRepository."""
 
 from typing import List, Generator
+from pathlib import Path
 import google.generativeai as genai
+from PIL import Image
 
 from ...domain.repositories.llm_repository import LLMRepository
 from ...domain.models import ChatMessage, MessageRole
@@ -160,3 +162,55 @@ class GoogleGeminiLLM(LLMRepository):
             Model name string.
         """
         return self._model_name
+
+    def supports_vision(self) -> bool:
+        """Return True for Gemini models that support image input."""
+        vision_models = ("gemini-2.0", "gemini-2.5", "gemini-1.5")
+        return any(self._model_name.startswith(m) for m in vision_models)
+
+    def invoke_with_images(self, messages: List[ChatMessage], images: List[str]) -> str:
+        """Generate a response using both text messages and images.
+
+        Args:
+            messages: List of ChatMessage from domain.
+            images: List of image file paths (max 4).
+
+        Returns:
+            Generated response text.
+        """
+        try:
+            # Extract the last user message as the prompt
+            prompt = next(
+                (m.content for m in reversed(messages) if m.role == MessageRole.USER),
+                ""
+            )
+
+            # Load images with PIL (max 4)
+            pil_images = []
+            for path in images[:4]:
+                if Path(path).exists():
+                    pil_images.append(Image.open(path).convert("RGB"))
+
+            system_instruction = next(
+                (m.content for m in messages if m.role == MessageRole.SYSTEM),
+                None
+            )
+            model = genai.GenerativeModel(
+                self._model_name,
+                system_instruction=system_instruction
+            ) if system_instruction else self._model
+
+            content = [prompt] + pil_images
+            response = model.generate_content(
+                content,
+                generation_config=genai.types.GenerationConfig(
+                    temperature=self._temperature,
+                    max_output_tokens=self._max_tokens,
+                )
+            )
+            return response.text
+
+        except Exception as e:
+            error_msg = f"Error generating vision response from Gemini: {str(e)}"
+            print(f"❌ {error_msg}")
+            return error_msg
