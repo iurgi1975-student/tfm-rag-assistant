@@ -44,8 +44,33 @@ class LLMRepository(ABC):
     @abstractmethod
     def get_model_name(self) -> str:
         """Get the name of the model being used.
-        
+
         Returns:
             Model name string.
         """
         pass
+
+    def supports_vision(self) -> bool:
+        """Return True if this LLM can process images.
+
+        Defaults to False. Override in vision-capable implementations.
+        """
+        return False
+
+    def invoke_with_images(self, messages: List['ChatMessage'], images: List[str]) -> str:
+        """Generate a response using both text messages and images.
+
+        Args:
+            messages: List of ChatMessage from domain.
+            images: List of image file paths to include in the prompt.
+
+        Returns:
+            Generated response text.
+
+        Raises:
+            NotImplementedError: If the implementation does not support vision.
+        """
+        raise NotImplementedError(
+            f"{self.__class__.__name__} does not support vision. "
+            "Override invoke_with_images() and return True from supports_vision()."
+        )

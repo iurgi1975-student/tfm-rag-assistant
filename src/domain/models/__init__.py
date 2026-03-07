@@ -3,8 +3,8 @@
 Simple data classes representing core domain concepts without external dependencies.
 """
 
-from .document import Document, DocumentChunk
+from .document import Document, DocumentChunk, ImageContent
 from .search_result import SearchResult
 from .chat_message import ChatMessage, MessageRole
 
-__all__ = ["Document", "DocumentChunk", "SearchResult", "ChatMessage", "MessageRole"]
+__all__ = ["Document", "DocumentChunk", "ImageContent", "SearchResult", "ChatMessage", "MessageRole"]

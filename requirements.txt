@@ -15,8 +15,21 @@ gradio<6.0
 # Vector database
 chromadb>=0.5.0
 
-# pdf processing
+# PDF processing
 pypdf>=5.0.0
+
+# Multimodal: image processing
+torch
+torchvision
+transformers
+Pillow>=10.0.0
+
+# Multimodal: PDF image extraction
+PyMuPDF>=1.24.0
+
+# Multimodal: DXF/CAD processing
+ezdxf>=1.3.0
+matplotlib>=3.8.0
 
 # General utilities
 python-dotenv>=1.0.0
