@@ -151,6 +151,7 @@ Icon
 
 # Vector Database
 chroma_db/
+chroma_db_multimodal/
 *.db
 
 # Test and Coverage
@@ -230,6 +231,7 @@ documents/
 uploads/
 temp_docs/
 pdf_cache/
+data/
 
 # API keys and secrets
 .env.local

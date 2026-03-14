@@ -1,40 +1,54 @@
 # Core AI and LLM libraries
-langchain>=0.3.0
-langchain-openai>=0.3.0
-langchain-community>=0.3.0
-langchain-core>=0.3.0
-openai>=1.0.0
-langchain-huggingface
-sentence-transformers
-langchain-ollama
-google-generativeai>=0.3.0
+langchain==1.2.7
+langchain-openai==1.1.7
+langchain-community==0.4.1
+langchain-core==1.2.7
+langchain-text-splitters==1.1.0
+langchain-huggingface==1.2.0
+langchain-ollama==1.0.1
+openai==2.15.0
+google-generativeai==0.8.6
+
+# Embeddings
+# torch 2.10.0 hangs on import with Python 3.12.0 — use 2.6.0
+# transformers 4.57.x has a recursive import bug — use 4.44.2
+# +cpu suffix: CPU-only build (no CUDA), keeps download small
+sentence-transformers==3.3.1
+torch==2.6.0+cpu
+torchvision==0.21.0+cpu
+transformers==4.44.2
+tokenizers==0.19.1
+safetensors==0.7.0
+huggingface-hub==0.36.0
 
 # Web interface
-gradio<6.0
+gradio==5.50.0
+gradio_client==1.14.0
 
 # Vector database
-chromadb>=0.5.0
+chromadb==1.4.1
 
 # PDF processing
-pypdf>=5.0.0
+pypdf==6.6.0
 
 # Multimodal: image processing
-torch
-torchvision
-transformers
-Pillow>=10.0.0
+Pillow==11.3.0
 
 # Multimodal: PDF image extraction
-PyMuPDF>=1.24.0
+PyMuPDF==1.27.1
 
 # Multimodal: DXF/CAD processing
-ezdxf>=1.3.0
-matplotlib>=3.8.0
+ezdxf==1.4.3
+matplotlib==3.10.8
 
 # General utilities
-python-dotenv>=1.0.0
+python-dotenv==1.2.1
+numpy==2.4.2
+# urllib3 2.6+ requires backports.zstd which hangs on import — use 2.2.3
+urllib3==2.2.3
+requests==2.32.5
 
 # Testing dependencies
-pytest>=7.0.0
-pytest-cov>=4.0.0
-pytest-mock>=3.10.0
+pytest==9.0.2
+pytest-cov==7.0.0
+pytest-mock==3.15.1

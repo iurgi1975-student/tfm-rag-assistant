@@ -34,16 +34,19 @@ class ChatInterface:
         total_docs = 0
         processed_files = []
         
+        total_images = 0
         for file_path in files:
             try:
-                count = self.document_service.ingest_document(file_path)
-                total_docs += count
+                info = self.document_service.ingest_document(file_path)
+                total_docs += info["chunks"]
+                total_images += info["images"]
                 processed_files.append(os.path.basename(file_path))
             except Exception as e:
                 return f"Error processing {os.path.basename(file_path)}: {str(e)}"
         
         files_list = ", ".join(processed_files)
-        return f"Successfully processed {len(processed_files)} file(s): {files_list}. Added {total_docs} document(s) to knowledge base."
+        image_note = f", {total_images} image(s)" if total_images else ""
+        return f"\u2705 Processed {len(processed_files)} file(s): {files_list}. Added {total_docs} chunk(s){image_note} to knowledge base."
     
     def add_text_to_knowledge_base(self, text: str) -> str:
         """Add text directly to the knowledge base."""
@@ -121,6 +124,64 @@ class ChatInterface:
         except Exception as e:
             return f"Error searching documents: {str(e)}"
     
+    def visual_search_handler(
+        self, query: str, include_images: bool, k_text: int, k_images: int
+    ):
+        """Handler for the visual search tab."""
+        if not query.strip():
+            return "Please enter a search query.", []
+
+        try:
+            results = self.rag_service.search_with_images(
+                query, include_images=include_images, k_text=k_text, k_images=k_images
+            )
+            text_results = results["text_results"]
+            image_results = results["image_results"]
+
+            if not results["combined"]:
+                return "No relevant documents found.", []
+
+            markdown = ""
+
+            if text_results:
+                markdown += f"### \U0001f4c4 Text Results ({len(text_results)})\n\n"
+                for i, r in enumerate(text_results, 1):
+                    source = r.chunk.metadata.get("source", "Unknown")
+                    preview = (
+                        r.chunk.content[:300] + "..."
+                        if len(r.chunk.content) > 300
+                        else r.chunk.content
+                    )
+                    markdown += (
+                        f"**Result {i}** "
+                        f"(Score: {r.similarity_score:.2f}, "
+                        f"Source: {os.path.basename(source)})\n\n"
+                        f"{preview}\n\n---\n\n"
+                    )
+
+            if image_results:
+                markdown += f"### \U0001f5bc\ufe0f Image Results ({len(image_results)})\n\n"
+                for i, r in enumerate(image_results, 1):
+                    img = r.chunk.image_content
+                    if img:
+                        markdown += f"**Image {i}** (Score: {r.similarity_score:.2f})\n"
+                        if img.extracted_text:
+                            markdown += f"Extracted text: {img.extracted_text[:200]}\n"
+                        markdown += "\n"
+
+            image_paths = [
+                r.chunk.image_content.image_path
+                for r in image_results
+                if r.chunk.image_content
+                and r.chunk.image_content.image_path
+                and os.path.exists(r.chunk.image_content.image_path)
+            ]
+
+            return markdown, image_paths
+
+        except Exception as e:
+            return f"Error searching: {str(e)}", []
+
     def create_interface(self) -> gr.Blocks:
         """Create the Gradio interface with optional login."""
         custom_css = """
@@ -254,9 +315,9 @@ class ChatInterface:
                 with gr.Column():
                     gr.Markdown("### Upload Documents")
                     file_upload = gr.File(
-                        label="Upload Files (PDF)",
+                        label="Upload Files (PDF, DXF, TXT)",
                         file_count="multiple",
-                        file_types=[".pdf"],
+                        file_types=[".pdf", ".dxf", ".txt"],
                         elem_classes=["upload-area"]
                     )
                     upload_btn = gr.Button("Process Files", variant="primary")
@@ -287,7 +348,39 @@ class ChatInterface:
                     gr.Markdown("### Knowledge Base Management")
                     clear_kb_btn = gr.Button("Clear Knowledge Base", variant="stop")
                     clear_kb_status = gr.Textbox(label="Clear Status", interactive=False)
-        
+
+        with gr.Tab("\U0001f50d B\u00fasqueda Visual"):
+            with gr.Row():
+                with gr.Column(scale=2):
+                    visual_query = gr.Textbox(
+                        label="Search Query",
+                        placeholder="e.g. 'hydraulic circuit', 'floor plan section A'",
+                        lines=2,
+                    )
+                    visual_include_images = gr.Checkbox(
+                        label="Include images", value=True
+                    )
+                    with gr.Row():
+                        visual_k_text = gr.Slider(
+                            minimum=1, maximum=10, value=4, step=1,
+                            label="Text results (k_text)"
+                        )
+                        visual_k_images = gr.Slider(
+                            minimum=1, maximum=10, value=4, step=1,
+                            label="Image results (k_images)"
+                        )
+                    visual_search_btn = gr.Button(
+                        "\U0001f50d Search", variant="primary"
+                    )
+                with gr.Column(scale=3):
+                    visual_results_md = gr.Markdown()
+            visual_gallery = gr.Gallery(
+                label="\U0001f4f7 Images found",
+                columns=3,
+                height=400,
+                object_fit="contain",
+            )
+
         # Event handlers
         def submit_message(message, history):
             return self.chat_response(message, history)
@@ -351,6 +444,18 @@ class ChatInterface:
         clear_kb_btn.click(
             self.get_knowledge_base_status,
             outputs=[status_display]
+        )
+
+        visual_search_btn.click(
+            self.visual_search_handler,
+            inputs=[visual_query, visual_include_images, visual_k_text, visual_k_images],
+            outputs=[visual_results_md, visual_gallery],
+        )
+
+        visual_query.submit(
+            self.visual_search_handler,
+            inputs=[visual_query, visual_include_images, visual_k_text, visual_k_images],
+            outputs=[visual_results_md, visual_gallery],
         )
     
     def launch(self, **kwargs):

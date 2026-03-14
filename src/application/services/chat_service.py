@@ -58,7 +58,9 @@ class ChatService:
         self, 
         message: str, 
         stream: bool = False,
-        use_rag: bool = True
+        use_rag: bool = True,
+        include_images: bool = True,
+        max_context_images: int = 3,
     ) -> Union[str, Generator]:
         """Process a chat message and return response.
         
@@ -66,14 +68,27 @@ class ChatService:
             message: User message.
             stream: Whether to stream the response.
             use_rag: Whether to use RAG for context retrieval.
+            include_images: Whether to include image results from RAG.
+            max_context_images: Max number of images to pass to a vision LLM.
             
         Returns:
             Response string or generator for streaming.
         """
-        # Get context from RAG if enabled and available
         context = ""
+        image_paths: List[str] = []
+
         if use_rag and self._rag_service:
-            context = self._rag_service.get_context(message)
+            try:
+                # Try multimodal search first
+                results = self._rag_service.search_with_images(
+                    message, include_images=include_images
+                )
+                context, image_paths = self._rag_service.format_multimodal_context(results)
+                print(f"🔍 Multimodal search: {len(results['text_results'])} text, {len(results['image_results'])} images", flush=True)
+            except Exception as e:
+                # Fallback to text-only search (e.g. image collection not created yet)
+                print(f"⚠️ Multimodal search failed, falling back to text-only: {e}", flush=True)
+                context = self._rag_service.get_context(message)
         elif use_rag and not self._rag_service:
             print("Warning: use_rag=True but no RAG service is configured. Continuing without context.")
         
@@ -83,18 +98,30 @@ class ChatService:
         # Get trimmed chat history
         chat_history = self._get_trimmed_history()
         
-        # Build messages for LLM using domain ChatMessage
+        # Build messages for LLM
         messages = [
             ChatMessage(role=MessageRole.SYSTEM, content=system_prompt)
         ]
         messages.extend(chat_history)
         messages.append(ChatMessage(role=MessageRole.USER, content=message))
-        
-        # Get response
+
+        # Use vision LLM if images are available and the model supports it
+        use_vision = (
+            include_images
+            and image_paths
+            and self._llm.supports_vision()
+        )
+        if use_vision:
+            limited_images = image_paths[:max_context_images]
+            print(f"👁️ Using vision LLM with {len(limited_images)} images")
+            if stream:
+                return self._handle_streaming(message, messages)
+            return self._handle_non_streaming_vision(message, messages, limited_images)
+
+        # Standard text-only response
         if stream:
             return self._handle_streaming(message, messages)
-        else:
-            return self._handle_non_streaming(message, messages)
+        return self._handle_non_streaming(message, messages)
     
     def clear_history(self) -> None:
         """Clear conversation history (memory + persistence)."""
@@ -144,6 +171,27 @@ Current time: {current_time}"""
             return self._chat_history[-self._memory_window:]
         return self._chat_history
     
+    def _handle_non_streaming_vision(
+        self,
+        message: str,
+        messages: List[ChatMessage],
+        image_paths: List[str],
+    ) -> str:
+        """Handle non-streaming response with image context passed to vision LLM."""
+        response_text = self._llm.invoke_with_images(messages, image_paths)
+
+        user_message = ChatMessage(role=MessageRole.USER, content=message)
+        assistant_message = ChatMessage(role=MessageRole.ASSISTANT, content=response_text)
+
+        self._chat_history.append(user_message)
+        self._chat_history.append(assistant_message)
+
+        if self._chat_repository:
+            self._chat_repository.save_message(self._session_id, user_message)
+            self._chat_repository.save_message(self._session_id, assistant_message)
+
+        return response_text
+
     def _handle_non_streaming(
         self, 
         message: str, 

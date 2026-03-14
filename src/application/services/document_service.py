@@ -26,14 +26,14 @@ class DocumentService:
         self._repository = vector_repository
         self._processor = document_processor
     
-    def ingest_document(self, file_path: str) -> int:
+    def ingest_document(self, file_path: str) -> dict:
         """Load and add a document to the knowledge base.
         
         Args:
             file_path: Path to the document file.
             
         Returns:
-            Number of documents added (typically 1).
+            Dict with keys 'chunks' (int) and 'images' (int).
             
         Raises:
             ValueError: If file type is unsupported.
@@ -46,10 +46,18 @@ class DocumentService:
         # Load and process document
         documents = self._processor.load_document(file_path)
         
-        # Add to repository
+        # Add text chunks to repository
         self._repository.add_documents(documents)
+
+        # Add images if the repository and documents support it
+        image_count = 0
+        for document in documents:
+            if document.images:
+                print(f"\U0001f4f8 Adding {len(document.images)} images from '{document.title}'")
+                self._repository.add_images(document.images, document.id)
+                image_count += len(document.images)
         
-        return len(documents)
+        return {"chunks": len(documents), "images": image_count}
     
     def ingest_text(self, text: str, source: str = "text_input") -> int:
         """Process and add raw text to the knowledge base.

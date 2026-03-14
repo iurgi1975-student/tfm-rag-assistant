@@ -127,6 +127,12 @@ def main():
         )
         
         print("✅ Interface created successfully!")
+
+        # Load CLIP into RAM before launching the URL — prevents broken connection on first upload
+        if container.use_multimodal:
+            print("📦 Loading CLIP model into RAM (this takes ~30s on CPU)...", flush=True)
+            container.vector_store.embeddings._get_model()
+            print("✅ CLIP ready — launching interface", flush=True)
         
         # Launch the interface
         print("\n" + "="*60)
@@ -147,11 +153,16 @@ def main():
         print("="*60)
         
         # Launch the Gradio interface
-        chat_interface.launch(
+        print(f"\n🌐 URL: http://localhost:{port}", flush=True)
+        print(f"🌐 URL: http://127.0.0.1:{port}", flush=True)
+        interface = chat_interface.create_interface()
+        interface.queue()  # enables async queue so long DXF/CLIP processing doesn't break connection
+        interface.launch(
             server_name="0.0.0.0",
             server_port=port,
             share=False,
-            debug=args.debug
+            debug=args.debug,
+            show_error=True,
         )
         
     except KeyboardInterrupt:

@@ -11,6 +11,9 @@ import uuid
 from pathlib import Path
 from typing import List, Optional, Tuple
 
+import matplotlib
+matplotlib.use("Agg")  # non-interactive backend, safe in any thread
+
 import fitz  # PyMuPDF
 from PIL import Image
 
@@ -94,31 +97,40 @@ class CADImageProcessor:
             ImageContent object or None if conversion fails.
         """
         try:
+            import gc
             import ezdxf
             from ezdxf.addons.drawing import RenderContext, Frontend
             from ezdxf.addons.drawing.matplotlib import MatplotlibBackend
             import matplotlib.pyplot as plt
+            plt.switch_backend("Agg")
 
-            doc = ezdxf.readfile(dxf_path)
-            msp = doc.modelspace()
+            dxf_doc = ezdxf.readfile(dxf_path)
+            msp = dxf_doc.modelspace()
 
-            fig = plt.figure(figsize=(16, 12), dpi=150)
+            # Extract text first — before rendering which may fail due to OOM
+            extracted_text = self._extract_dxf_text(dxf_doc)
+
+            # Small figure + low DPI to save RAM (~12 GB system)
+            fig = plt.figure(figsize=(10, 8), dpi=100)
             ax = fig.add_axes([0, 0, 1, 1])
 
-            ctx = RenderContext(doc)
+            ctx = RenderContext(dxf_doc)
             backend = MatplotlibBackend(ax)
             Frontend(ctx, backend).draw_layout(msp)
 
             image_id = str(uuid.uuid4())
             image_path = str(self.output_dir / f"{image_id}.png")
-            fig.savefig(image_path, format="png", bbox_inches="tight", dpi=150)
+            fig.savefig(image_path, format="png", bbox_inches="tight", dpi=100)
             plt.close(fig)
+
+            # Use None assignment instead of del to avoid Python 3.12 UnboundLocalError
+            fig = ax = ctx = backend = dxf_doc = msp = None
+            gc.collect()
 
             with Image.open(image_path) as img:
                 width, height = img.size
 
             thumbnail_path = self._create_thumbnail(image_path, image_id)
-            extracted_text = self._extract_dxf_text(doc)
 
             return ImageContent(
                 id=image_id,
@@ -169,14 +181,49 @@ class CADImageProcessor:
             return None
 
     def _extract_dxf_text(self, doc) -> str:
-        """Extract text entities from a DXF document (title block text, etc.)."""
+        """Extract text and dimension values from a DXF document.
+        
+        Extracts:
+        - TEXT / MTEXT entities (title block, notes, labels)
+        - DIMENSION entities (actual numeric measurement values)
+        """
         texts = []
+        dimension_values = []
+
         try:
             for entity in doc.modelspace():
-                if entity.dxftype() in ("TEXT", "MTEXT"):
+                etype = entity.dxftype()
+
+                if etype in ("TEXT", "MTEXT"):
                     text_value = getattr(entity.dxf, "text", "") or getattr(entity.dxf, "insert", "")
                     if isinstance(text_value, str) and text_value.strip():
                         texts.append(text_value.strip())
+
+                elif etype == "DIMENSION":
+                    # actual_measurement is the computed value ezdxf reads from the DXF
+                    measurement = getattr(entity.dxf, "actual_measurement", None)
+                    if measurement is not None:
+                        dimension_values.append(round(float(measurement), 2))
+                    else:
+                        # fallback: text override stored on the dimension
+                        dim_text = getattr(entity.dxf, "text", "")
+                        if dim_text and dim_text.strip() not in ("", "<>"):
+                            dimension_values.append(dim_text.strip())
+
         except Exception:
             pass
-        return " | ".join(texts[:20])  # cap at 20 text blocks
+
+        parts = []
+        if texts:
+            parts.append(" | ".join(texts[:20]))
+        if dimension_values:
+            # Sort numerically when possible so the LLM sees them in order
+            numeric = sorted(
+                [v for v in dimension_values if isinstance(v, float)],
+                reverse=True
+            )
+            str_vals = [v for v in dimension_values if isinstance(v, str)]
+            all_vals = [str(v) for v in numeric] + str_vals
+            parts.append("Cotas: " + ", ".join(all_vals[:40]))
+
+        return " | ".join(parts)

@@ -38,7 +38,7 @@ class TestDocumentService:
             result = service.ingest_document(temp_file)
             
             # Verificaciones
-            assert result == 1
+            assert result["chunks"] == 1
             
             # Verificamos que se llamaron los métodos correctos
             mock_document_processor.load_document.assert_called_once_with(temp_file)

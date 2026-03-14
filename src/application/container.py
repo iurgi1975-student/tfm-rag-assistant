@@ -8,6 +8,7 @@ from typing import Optional
 
 from ..infrastructure.vector_stores.chroma_store import ChromaVectorStore
 from ..infrastructure.document_processor import DocumentProcessor
+from ..infrastructure.cad_image_processor import CADImageProcessor
 from ..infrastructure.llm import OllamaLLM, GoogleGeminiLLM
 from ..infrastructure.persistence import SQLiteChatRepository
 from .services.document_service import DocumentService
@@ -34,7 +35,7 @@ class AppContainer:
         enable_chat_persistence: bool = True,
         chat_db_path: str = "./data/chat_history.db",
         default_session_id: str = "main",
-        use_multimodal: bool = False,
+        use_multimodal: bool = True,
         chroma_dir_multimodal: str = "./chroma_db_multimodal",
     ):
         """Initialize container with configuration.
@@ -77,6 +78,7 @@ class AppContainer:
         # Singleton instances
         self._vector_store: Optional[ChromaVectorStore] = None
         self._llm: Optional[OllamaLLM] = None
+        self._cad_processor: Optional[CADImageProcessor] = None
         self._document_processor: Optional[DocumentProcessor] = None
         self._chat_repository: Optional[SQLiteChatRepository] = None
         self._document_service: Optional[DocumentService] = None
@@ -91,20 +93,23 @@ class AppContainer:
         - Multimodal mode:  uses ./chroma_db_multimodal (clip-ViT-B-32, 512 dims)
         """
         if self._vector_store is None:
-            print("💾 Initializing Vector Store...", file=sys.stderr, flush=True)
-        try:
             if self.use_multimodal:
-                self._vector_store = ChromaVectorStore(
-                    persist_dir=self.chroma_dir_multimodal,
-                    embedding_model="clip-ViT-B-32",
-                    use_multimodal=True,
-                )
+                print("💾 Initializing Vector Store [🖼️  MULTIMODAL — CLIP clip-ViT-B-32, 512 dims]...", flush=True)
             else:
-                self._vector_store = ChromaVectorStore(persist_dir=self.chroma_dir)
-            print("✅ Vector Store initialized!", file=sys.stderr, flush=True)
-        except Exception as e:
-            print(f"❌ Vector Store failed: {e}", file=sys.stderr, flush=True)
-            raise
+                print("💾 Initializing Vector Store [📝 TEXT-ONLY — all-MiniLM-L6-v2, 384 dims]...", flush=True)
+            try:
+                if self.use_multimodal:
+                    self._vector_store = ChromaVectorStore(
+                        persist_dir=self.chroma_dir_multimodal,
+                        embedding_model="clip-ViT-B-32",
+                        use_multimodal=True,
+                    )
+                else:
+                    self._vector_store = ChromaVectorStore(persist_dir=self.chroma_dir)
+                print("✅ Vector Store initialized!", flush=True)
+            except Exception as e:
+                print(f"❌ Vector Store failed: {e}", flush=True)
+                raise
         return self._vector_store
     
     @property
@@ -134,12 +139,20 @@ class AppContainer:
         return self._llm
     
     @property
+    def cad_processor(self) -> CADImageProcessor:
+        """Get or create CAD image processor (only used in multimodal mode)."""
+        if self._cad_processor is None:
+            self._cad_processor = CADImageProcessor()
+        return self._cad_processor
+
+    @property
     def document_processor(self) -> DocumentProcessor:
         """Get or create document processor."""
         if self._document_processor is None:
             self._document_processor = DocumentProcessor(
                 chunk_size=self.chunk_size,
-                chunk_overlap=self.chunk_overlap
+                chunk_overlap=self.chunk_overlap,
+                cad_processor=self.cad_processor if self.use_multimodal else None,
             )
         return self._document_processor
     
